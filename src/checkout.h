@@ -21,4 +21,11 @@ extern int git_checkout_iterator(
 	git_iterator *target,
 	git_checkout_opts *opts);
 
+int git_checkout_blob(
+	git_repository *repo,
+	const git_oid *oid,
+	const char *path,
+	int mode,
+	git_checkout_opts *opts);
+
 #endif

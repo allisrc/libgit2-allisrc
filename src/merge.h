@@ -19,6 +19,7 @@
 
 #define GIT_MERGE_TREE_RENAME_THRESHOLD	50
 #define GIT_MERGE_TREE_TARGET_LIMIT		1000
+#define MERGE_CONFIG_FILE_MODE	0666
 
 /** Types of changes when files are merged from branch to branch. */
 typedef enum {
@@ -123,5 +124,33 @@ int git_merge_diff_list__find_differences(git_merge_diff_list *merge_diff_list,
 int git_merge_diff_list__find_renames(git_repository *repo, git_merge_diff_list *merge_diff_list, const git_merge_tree_opts *opts);
 
 void git_merge_diff_list__free(git_merge_diff_list *diff_list);
+
+/** Internal structure for merge inputs */
+struct git_merge_head {
+	char *branch_name;
+	git_oid oid;
+
+	git_commit *commit;
+};
+
+/** Internal structure for merge results */
+struct git_merge_result {
+	bool is_uptodate;
+
+	bool is_fastforward;
+	git_oid fastforward_oid;
+	
+	git_diff_tree_list *diff_tree;
+	git_vector conflicts;
+};
+
+int git_merge__setup(
+	git_repository *repo,
+	const git_merge_head *our_head,
+	const git_merge_head *their_heads[],
+	size_t their_heads_len,
+	unsigned int flags);
+int git_merge__bases_many(git_commit_list **out, git_revwalk *walk, git_commit_list_node *one, git_vector *twos);
+int git_merge__cleanup(git_repository *repo);
 
 #endif
