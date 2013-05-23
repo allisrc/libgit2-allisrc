@@ -74,4 +74,10 @@ int gitno_extract_url_parts(
 		const char *url,
 		const char *default_port);
 
+int gitno_extract_host_and_port(
+		char **host,
+		char **port,
+		const char *url,
+		const char *default_port);
+
 #endif

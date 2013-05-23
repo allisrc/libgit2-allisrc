@@ -629,3 +629,13 @@ int gitno_extract_url_parts(
 
 	return 0;
 }
+
+int gitno_extract_host_and_port(
+		char **host,
+		char **port,
+		const char *url,
+		const char *default_port)
+{
+    char *username = NULL, *password = NULL;
+	return (gitno_extract_url_parts(host, port, &username, &password, url, default_port));
+}

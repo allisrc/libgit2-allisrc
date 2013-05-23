@@ -31,7 +31,7 @@ GIT_BEGIN_DECL
 typedef enum {
 	/* git_cred_userpass_plaintext */
 	GIT_CREDTYPE_USERPASS_PLAINTEXT = 1,
-	GIT_CREDTYPE_SSH_KEYFILE_PASSPHRASE = 2,
+	GIT_CREDTYPE_SSH_PASSWORD = 2,
 	GIT_CREDTYPE_SSH_PUBLICKEY = 3,
 } git_credtype_t;
 
@@ -50,24 +50,22 @@ typedef struct git_cred_userpass_plaintext {
 } git_cred_userpass_plaintext;
 
 #ifdef GIT_SSH
-typedef LIBSSH2_USERAUTH_PUBLICKEY_SIGN_FUNC((*git_cred_sign_callback));
 
-/* A ssh key file and passphrase */
-typedef struct git_cred_ssh_keyfile_passphrase {
+typedef struct git_cred_ssh_password {
 	git_cred parent;
-	char *publickey;
-	char *privatekey;
-	char *passphrase;
-} git_cred_ssh_keyfile_passphrase;
+	char *username;
+	char *password;
+} git_cred_ssh_password;
 
-/* A ssh public key and authentication callback */
+/* ssh authenticated using public key */
 typedef struct git_cred_ssh_publickey {
 	git_cred parent;
-	char *publickey;
-    size_t publickey_len;
-	void *sign_callback;
-	void *sign_data;
+	char *username;
+	char *publickey;	// may be set to NULL
+	char *privatekey;
+	char *passphrase;		// may be set to NULL
 } git_cred_ssh_publickey;
+
 #endif
 
 /**
@@ -84,7 +82,7 @@ GIT_EXTERN(int) git_cred_userpass_plaintext_new(
 	const char *username,
 	const char *password);
 
-#ifdef GIT_SSH
+// #ifdef GIT_SSH
 /**
  * Creates a new ssh key file and passphrase credential object.
  * The supplied credential parameter will be internally duplicated.
@@ -95,11 +93,11 @@ GIT_EXTERN(int) git_cred_userpass_plaintext_new(
  * @param passphrase The passphrase of the credential.
  * @return 0 for success or an error code for failure
  */
-GIT_EXTERN(int) git_cred_ssh_keyfile_passphrase_new(
-	git_cred **out,
-	const char *publickey,
-	const char *privatekey,
-    const char *passphrase);
+GIT_EXTERN(int) git_cred_ssh_password_new(
+	git_cred **cred,
+	/* TODO: known_hosts */
+	const char *username,
+	const char *password);
 
 /**
  * Creates a new ssh public key credential object.
@@ -113,12 +111,13 @@ GIT_EXTERN(int) git_cred_ssh_keyfile_passphrase_new(
  * @return 0 for success or an error code for failure
  */
 GIT_EXTERN(int) git_cred_ssh_publickey_new(
-	git_cred **out,
+	git_cred **cred,
+	/* TODO: known_hosts */
+	const char *username,
 	const char *publickey,
-    size_t publickey_len,
-    git_cred_sign_callback,
-    void *sign_data);
-#endif
+	const char *privatekey,
+	const char *password);
+// #endif
 
 /**
  * Signature of a function which acquires a credential object.
