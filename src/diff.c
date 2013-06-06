@@ -231,10 +231,23 @@ static char *diff_strdup_prefix(git_pool *pool, const char *prefix)
 		return git_pool_strndup(pool, prefix, len + 1);
 }
 
+GIT_INLINE(const char *) diff_delta__path(const git_diff_delta *delta)
+{
+	const char *str = delta->old_file.path;
+
+	if (!str ||
+		delta->status == GIT_DELTA_ADDED ||
+		delta->status == GIT_DELTA_RENAMED ||
+		delta->status == GIT_DELTA_COPIED)
+		str = delta->new_file.path;
+
+	return str;
+}
+
 int git_diff_delta__cmp(const void *a, const void *b)
 {
 	const git_diff_delta *da = a, *db = b;
-	int val = strcmp(da->old_file.path, db->old_file.path);
+	int val = strcmp(diff_delta__path(da), diff_delta__path(db));
 	return val ? val : ((int)da->status - (int)db->status);
 }
 
@@ -369,6 +382,10 @@ static int diff_list_apply_options(
 	/* flag INCLUDE_TYPECHANGE_TREES implies INCLUDE_TYPECHANGE */
 	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_TYPECHANGE_TREES))
 		diff->opts.flags |= GIT_DIFF_INCLUDE_TYPECHANGE;
+
+	/* flag INCLUDE_UNTRACKED_CONTENT implies INCLUDE_UNTRACKED */
+	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_UNTRACKED_CONTENT))
+		diff->opts.flags |= GIT_DIFF_INCLUDE_UNTRACKED;
 
 	/* load config values that affect diff behavior */
 	if (git_repository_config__weakptr(&cfg, repo) < 0)

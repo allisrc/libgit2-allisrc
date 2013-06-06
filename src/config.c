@@ -23,7 +23,7 @@ typedef struct {
 	git_refcount rc;
 
 	git_config_backend *file;
-	unsigned int level;
+	git_config_level_t level;
 } file_internal;
 
 static void file_internal_free(file_internal *internal)
@@ -87,7 +87,7 @@ int git_config_new(git_config **out)
 int git_config_add_file_ondisk(
 	git_config *cfg,
 	const char *path,
-	unsigned int level,
+	git_config_level_t level,
 	int force)
 {
 	git_config_backend *file = NULL;
@@ -138,11 +138,11 @@ int git_config_open_ondisk(git_config **out, const char *path)
 static int find_internal_file_by_level(
 	file_internal **internal_out,
 	const git_config *cfg,
-	int level)
+	git_config_level_t level)
 {
 	int pos = -1;
 	file_internal *internal;
-	unsigned int i;
+	size_t i;
 
 	/* when passing GIT_CONFIG_HIGHEST_LEVEL, the idea is to get the config file
 	 * which has the highest level. As config files are stored in a vector
@@ -153,14 +153,14 @@ static int find_internal_file_by_level(
 		pos = 0;
 	} else {
 		git_vector_foreach(&cfg->files, i, internal) {
-			if (internal->level == (unsigned int)level)
+			if (internal->level == level)
 				pos = i;
 		}
 	}
 
 	if (pos == -1) {
 		giterr_set(GITERR_CONFIG,
-			"No config file exists for the given level '%i'", level);
+			"No config file exists for the given level '%i'", (int)level);
 		return GIT_ENOTFOUND;
 	}
 
@@ -175,17 +175,17 @@ static int duplicate_level(void **old_raw, void *new_raw)
 
 	GIT_UNUSED(new_raw);
 
-	giterr_set(GITERR_CONFIG, "A file with the same level (%i) has already been added to the config", (*old)->level);
+	giterr_set(GITERR_CONFIG, "A file with the same level (%i) has already been added to the config", (int)(*old)->level);
 	return GIT_EEXISTS;
 }
 
 static void try_remove_existing_file_internal(
 	git_config *cfg,
-	unsigned int level)
+	git_config_level_t level)
 {
 	int pos = -1;
 	file_internal *internal;
-	unsigned int i;
+	size_t i;
 
 	git_vector_foreach(&cfg->files, i, internal) {
 		if (internal->level == level)
@@ -206,7 +206,7 @@ static void try_remove_existing_file_internal(
 static int git_config__add_internal(
 	git_config *cfg,
 	file_internal *internal,
-	unsigned int level,
+	git_config_level_t level,
 	int force)
 {
 	int result;
@@ -238,7 +238,7 @@ int git_config_open_global(git_config **cfg_out, git_config *cfg)
 int git_config_open_level(
 	git_config **cfg_out,
 	const git_config *cfg_parent,
-	unsigned int level)
+	git_config_level_t level)
 {
 	git_config *cfg;
 	file_internal *internal;
@@ -263,7 +263,7 @@ int git_config_open_level(
 int git_config_add_backend(
 	git_config *cfg,
 	git_config_backend *file,
-	unsigned int level,
+	git_config_level_t level,
 	int force)
 {
 	file_internal *internal;
@@ -339,17 +339,6 @@ int git_config_foreach_match(
 	return ret;
 }
 
-int git_config_delete_entry(git_config *cfg, const char *name)
-{
-	git_config_backend *file;
-	file_internal *internal;
-
-	internal = git_vector_get(&cfg->files, 0);
-	file = internal->file;
-
-	return file->del(file, name);
-}
-
 /**************
  * Setters
  **************/
@@ -359,6 +348,19 @@ static int config_error_nofiles(const char *name)
 	giterr_set(GITERR_CONFIG,
 		"Cannot set value for '%s' when no config files exist", name);
 	return GIT_ENOTFOUND;
+}
+
+int git_config_delete_entry(git_config *cfg, const char *name)
+{
+	git_config_backend *file;
+	file_internal *internal;
+
+	internal = git_vector_get(&cfg->files, 0);
+	if (!internal || !internal->file)
+		return config_error_nofiles(name);
+	file = internal->file;
+
+	return file->del(file, name);
 }
 
 int git_config_set_int64(git_config *cfg, const char *name, int64_t value)
@@ -390,7 +392,7 @@ int git_config_set_string(git_config *cfg, const char *name, const char *value)
 	}
 
 	internal = git_vector_get(&cfg->files, 0);
-	if (!internal)
+	if (!internal || !internal->file)
 		return config_error_nofiles(name);
 	file = internal->file;
 
@@ -465,10 +467,13 @@ static int get_string(const char **out, const git_config *cfg, const char *name)
 {
 	file_internal *internal;
 	unsigned int i;
+	int res;
 
 	git_vector_foreach(&cfg->files, i, internal) {
-		int res = get_string_at_file(out, internal->file, name);
+		if (!internal || !internal->file)
+			continue;
 
+		res = get_string_at_file(out, internal->file, name);
 		if (res != GIT_ENOTFOUND)
 			return res;
 	}
@@ -503,12 +508,17 @@ int git_config_get_entry(const git_config_entry **out, const git_config *cfg, co
 {
 	file_internal *internal;
 	unsigned int i;
+	git_config_backend *file;
+	int ret;
 
 	*out = NULL;
 
 	git_vector_foreach(&cfg->files, i, internal) {
-		git_config_backend *file = internal->file;
-		int ret = file->get(file, name, out);
+		if (!internal || !internal->file)
+			continue;
+		file = internal->file;
+
+		ret = file->get(file, name, out);
 		if (ret != GIT_ENOTFOUND)
 			return ret;
 	}
@@ -516,8 +526,9 @@ int git_config_get_entry(const git_config_entry **out, const git_config *cfg, co
 	return config_error_notfound(name);
 }
 
-int git_config_get_multivar(const git_config *cfg, const char *name, const char *regexp,
-		git_config_foreach_cb cb, void *payload)
+int git_config_get_multivar(
+	const git_config *cfg, const char *name, const char *regexp,
+	git_config_foreach_cb cb, void *payload)
 {
 	file_internal *internal;
 	git_config_backend *file;
@@ -530,7 +541,10 @@ int git_config_get_multivar(const git_config *cfg, const char *name, const char 
 	 */
 	for (i = cfg->files.length; i > 0; --i) {
 		internal = git_vector_get(&cfg->files, i - 1);
+		if (!internal || !internal->file)
+			continue;
 		file = internal->file;
+
 		ret = file->get_multivar(file, name, regexp, cb, payload);
 		if (ret < 0 && ret != GIT_ENOTFOUND)
 			return ret;
@@ -545,7 +559,7 @@ int git_config_set_multivar(git_config *cfg, const char *name, const char *regex
 	file_internal *internal;
 
 	internal = git_vector_get(&cfg->files, 0);
-	if (!internal)
+	if (!internal || !internal->file)
 		return config_error_nofiles(name);
 	file = internal->file;
 
@@ -640,13 +654,12 @@ int git_config_open_default(git_config **out)
 	git_config *cfg = NULL;
 	git_buf buf = GIT_BUF_INIT;
 
-	error = git_config_new(&cfg);
+	if ((error = git_config_new(&cfg)) < 0)
+		return error;
 
-	if (!error && (!git_config_find_global_r(&buf) ||
-		       !git_config__global_location(&buf))) {
+	if (!git_config_find_global_r(&buf) || !git_config__global_location(&buf)) {
 		error = git_config_add_file_ondisk(cfg, buf.ptr,
 			GIT_CONFIG_LEVEL_GLOBAL, 0);
-	} else {
 	}
 
 	if (!error && !git_config_find_xdg_r(&buf))
@@ -659,7 +672,7 @@ int git_config_open_default(git_config **out)
 
 	git_buf_free(&buf);
 
-	if (error && cfg) {
+	if (error) {
 		git_config_free(cfg);
 		cfg = NULL;
 	}
@@ -672,6 +685,7 @@ int git_config_open_default(git_config **out)
 /***********
  * Parsers
  ***********/
+
 int git_config_lookup_map_value(
 	int *out,
 	const git_cvar_map *maps,

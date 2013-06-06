@@ -48,7 +48,7 @@ GIT_EXTERN(int) git_reference_lookup(git_reference **out, git_repository *repo, 
  *
  * @param out Pointer to oid to be filled in
  * @param repo The repository in which to look up the reference
- * @param name The long name for the reference
+ * @param name The long name for the reference (e.g. HEAD, refs/heads/master, refs/tags/v0.1.0, ...)
  * @return 0 on success, ENOTFOUND, EINVALIDSPEC or an error code.
  */
 GIT_EXTERN(int) git_reference_name_to_id(
@@ -354,6 +354,17 @@ GIT_EXTERN(int) git_reference_cmp(git_reference *ref1, git_reference *ref2);
 GIT_EXTERN(int) git_reference_iterator_new(git_reference_iterator **out, git_repository *repo);
 
 /**
+ * Create an iterator for the repo's references that match the
+ * specified glob
+ *
+ * @param out pointer in which to store the iterator
+ * @param repo the repository
+ * @param glob the glob to match against the reference names
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_reference_iterator_glob_new(git_reference_iterator **out, git_repository *repo, const char *glob);
+
+/**
  * Get the next reference name
  *
  * @param out pointer in which to store the string
@@ -513,6 +524,21 @@ GIT_EXTERN(int) git_reference_peel(
  * @return 1 if the reference name is acceptable; 0 if it isn't
  */
 GIT_EXTERN(int) git_reference_is_valid_name(const char *refname);
+
+/**
+ * Get the reference's short name
+ *
+ * This will transform the reference name into a name "human-readable"
+ * version. If no shortname is appropriate, it will return the full
+ * name.
+ *
+ * The memory is owned by the reference and must not be freed.
+ *
+ * @param ref a reference
+ * @return the human-readable version of the name
+ */
+GIT_EXTERN(const char *) git_reference_shorthand(git_reference *ref);
+
 
 /** @} */
 GIT_END_DECL

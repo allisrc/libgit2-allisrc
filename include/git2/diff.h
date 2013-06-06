@@ -89,9 +89,10 @@ typedef enum {
 	/** Include unmodified files in the diff list */
 	GIT_DIFF_INCLUDE_UNMODIFIED = (1 << 9),
 
-	/** Even with GIT_DIFF_INCLUDE_UNTRACKED, an entire untracked directory
-	 *  will be marked with only a single entry in the diff list; this flag
-	 *  adds all files under the directory as UNTRACKED entries, too.
+	/** Even with GIT_DIFF_INCLUDE_UNTRACKED, an entire untracked
+	 *  directory will be marked with only a single entry in the diff list
+	 *  (a la what core Git does in `git status`); this flag adds *all*
+	 *  files under untracked directories as UNTRACKED entries, too.
 	 */
 	GIT_DIFF_RECURSE_UNTRACKED_DIRS = (1 << 10),
 
@@ -103,7 +104,11 @@ typedef enum {
 	/** Use case insensitive filename comparisons */
 	GIT_DIFF_DELTAS_ARE_ICASE = (1 << 12),
 
-	/** When generating patch text, include the content of untracked files */
+	/** When generating patch text, include the content of untracked
+	 *  files.  This automatically turns on GIT_DIFF_INCLUDE_UNTRACKED but
+	 *  it does not turn on GIT_DIFF_RECURSE_UNTRACKED_DIRS.  Add that
+	 *  flag if you want the content of every single UNTRACKED file.
+	 */
 	GIT_DIFF_INCLUDE_UNTRACKED_CONTENT = (1 << 13),
 
 	/** Disable updating of the `binary` flag in delta records.  This is
@@ -139,7 +144,7 @@ typedef enum {
 	 *  consider UNTRACKED only if it has an actual untracked file in it.
 	 *  This scan is extra work for a case you often don't care about.  This
 	 *  flag makes libgit2 immediately label an untracked directory as
-	 *  UNTRACKED without looking insde it (which differs from core Git).
+	 *  UNTRACKED without looking inside it (which differs from core Git).
 	 *  Of course, ignore rules are still checked for the directory itself.
 	 */
 	GIT_DIFF_FAST_UNTRACKED_DIRS = (1 << 19),
@@ -243,6 +248,19 @@ typedef struct {
  * `NOT_BINARY` flag set to avoid examining file contents if you do not pass
  * in hunk and/or line callbacks to the diff foreach iteration function.  It
  * will just use the git attributes for those files.
+ *
+ * The similarity score is zero unless you call `git_diff_find_similar()`
+ * which does a similarity analysis of files in the diff.  Use that
+ * function to do rename and copy detection, and to split heavily modified
+ * files in add/delete pairs.  After that call, deltas with a status of
+ * GIT_DELTA_RENAMED or GIT_DELTA_COPIED will have a similarity score
+ * between 0 and 100 indicating how similar the old and new sides are.
+ *
+ * If you ask `git_diff_find_similar` to find heavily modified files to
+ * break, but to not *actually* break the records, then GIT_DELTA_MODIFIED
+ * records may have a non-zero similarity score if the self-similarity is
+ * below the split threshold.  To display this value like core Git, invert
+ * the score (a la `printf("M%03d", 100 - delta->similarity)`).
  */
 typedef struct {
 	git_diff_file old_file;
@@ -408,18 +426,28 @@ typedef enum {
 	/** consider unmodified as copy sources? (`--find-copies-harder`) */
 	GIT_DIFF_FIND_COPIES_FROM_UNMODIFIED = (1 << 3),
 
-	/** split large rewrites into delete/add pairs (`--break-rewrites=/M`) */
-	GIT_DIFF_FIND_AND_BREAK_REWRITES = (1 << 4),
+	/** mark large rewrites for split (`--break-rewrites=/M`) */
+	GIT_DIFF_FIND_REWRITES = (1 << 4),
+	/** actually split large rewrites into delete/add pairs */
+	GIT_DIFF_BREAK_REWRITES = (1 << 5),
+	/** mark rewrites for split and break into delete/add pairs */
+	GIT_DIFF_FIND_AND_BREAK_REWRITES =
+		(GIT_DIFF_FIND_REWRITES | GIT_DIFF_BREAK_REWRITES),
+
+	/** find renames/copies for untracked items in working directory */
+	GIT_DIFF_FIND_FOR_UNTRACKED = (1 << 6),
 
 	/** turn on all finding features */
-	GIT_DIFF_FIND_ALL = (0x1f),
+	GIT_DIFF_FIND_ALL = (0x0ff),
 
 	/** measure similarity ignoring leading whitespace (default) */
 	GIT_DIFF_FIND_IGNORE_LEADING_WHITESPACE = 0,
 	/** measure similarity ignoring all whitespace */
-	GIT_DIFF_FIND_IGNORE_WHITESPACE = (1 << 6),
+	GIT_DIFF_FIND_IGNORE_WHITESPACE = (1 << 12),
 	/** measure similarity including all data */
-	GIT_DIFF_FIND_DONT_IGNORE_WHITESPACE = (1 << 7),
+	GIT_DIFF_FIND_DONT_IGNORE_WHITESPACE = (1 << 13),
+	/** measure similarity only by comparing SHAs (fast and cheap) */
+	GIT_DIFF_FIND_EXACT_MATCH_ONLY = (1 << 14),
 } git_diff_find_t;
 
 /**
@@ -446,7 +474,10 @@ typedef struct {
  * - `copy_threshold` is the same as the -C option with a value
  * - `rename_from_rewrite_threshold` matches the top of the -B option
  * - `break_rewrite_threshold` matches the bottom of the -B option
- * - `target_limit` matches the -l option
+ * - `rename_limit` is the maximum number of matches to consider for
+ *   a particular file.  This is a little different from the `-l` option
+ *   to regular Git because we will still process up to this many matches
+ *   before abandoning the search.
  *
  * The `metric` option allows you to plug in a custom similarity metric.
  * Set it to NULL for the default internal metric which is based on sampling
@@ -458,21 +489,21 @@ typedef struct {
 	unsigned int version;
 
 	/** Combination of git_diff_find_t values (default FIND_RENAMES) */
-	unsigned int flags;
+	uint32_t flags;
 
 	/** Similarity to consider a file renamed (default 50) */
-	unsigned int rename_threshold;
+	uint16_t rename_threshold;
 	/** Similarity of modified to be eligible rename source (default 50) */
-	unsigned int rename_from_rewrite_threshold;
+	uint16_t rename_from_rewrite_threshold;
 	/** Similarity to consider a file a copy (default 50) */
-	unsigned int copy_threshold;
+	uint16_t copy_threshold;
 	/** Similarity to split modify into delete/add pair (default 60) */
-	unsigned int break_rewrite_threshold;
+	uint16_t break_rewrite_threshold;
 
-	/** Maximum similarity sources to examine (a la diff's `-l` option or
-	 *  the `diff.renameLimit` config) (default 200)
+	/** Maximum similarity sources to examine for a file (somewhat like
+	 *  git-diff's `-l` option or `diff.renameLimit` config) (default 200)
 	 */
-	unsigned int target_limit;
+	size_t rename_limit;
 
 	/** Pluggable similarity metric; pass NULL to use internal metric */
 	git_diff_similarity_metric *metric;
@@ -684,6 +715,22 @@ GIT_EXTERN(int) git_diff_foreach(
  * @return 0 on success, GIT_EUSER on non-zero callback, or error code
  */
 GIT_EXTERN(int) git_diff_print_compact(
+	git_diff_list *diff,
+	git_diff_data_cb print_cb,
+	void *payload);
+
+/**
+ * Iterate over a diff generating text output like "git diff --raw".
+ *
+ * Returning a non-zero value from the callbacks will terminate the
+ * iteration and cause this return `GIT_EUSER`.
+ *
+ * @param diff A git_diff_list generated by one of the above functions.
+ * @param print_cb Callback to make per line of diff text.
+ * @param payload Reference pointer that will be passed to your callback.
+ * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ */
+GIT_EXTERN(int) git_diff_print_raw(
 	git_diff_list *diff,
 	git_diff_data_cb print_cb,
 	void *payload);

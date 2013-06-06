@@ -336,6 +336,10 @@ static int create_and_configure_origin(
 	    (error = git_remote_set_pushurl(origin, options->pushurl)) < 0)
 		goto on_error;
 
+	if (options->transport_flags == GIT_TRANSPORTFLAGS_NO_CHECK_CERT) {
+        git_remote_check_cert(origin, 0);
+    }
+
 	if ((error = git_remote_save(origin)) < 0)
 		goto on_error;
 
@@ -422,7 +426,6 @@ static void normalize_options(git_clone_options *dst, const git_clone_options *s
 
 	/* Provide defaults for null pointers */
 	if (!dst->remote_name) dst->remote_name = "origin";
-	if (!dst->remote_autotag) dst->remote_autotag = GIT_REMOTE_DOWNLOAD_TAGS_AUTO;
 }
 
 int git_clone(
