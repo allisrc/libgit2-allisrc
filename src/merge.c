@@ -413,7 +413,7 @@ static char *merge_filediff_entry_name(const git_merge_head_old *merge_head,
 
 static int merge_filediff_entry_names(char **our_path,
 	char **their_path,
-	const git_merge_head *merge_heads[],
+	const git_merge_head_old *merge_heads[],
 	const git_diff_tree_delta *delta)
 {
 	bool rename;
