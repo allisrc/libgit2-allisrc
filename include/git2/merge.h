@@ -63,13 +63,13 @@ typedef struct {
 } git_merge_opts;
 
 /**
- * Flags for tree_many diff options.  A combination of these flags can be
- * passed in via the `flags` value in the `git_diff_tree_many_options`.
+ * Flags for `git_merge_tree` options.  A combination of these flags can be
+ * passed in via the `flags` value in the `git_merge_tree_opts`.
  */
 typedef enum {
 	/** Detect renames */
 	GIT_MERGE_TREE_FIND_RENAMES = (1 << 0),
-} git_merge_tree_flags;
+} git_merge_tree_flag_t;
 
 /**
  * Automerge options for `git_merge_trees_opts`.
@@ -84,7 +84,7 @@ typedef enum {
 
 typedef struct {
 	unsigned int version;
-	git_merge_tree_flags flags;
+	git_merge_tree_flag_t flags;
     
 	/** Similarity to consider a file renamed (default 50) */
 	unsigned int rename_threshold;
@@ -119,8 +119,13 @@ GIT_EXTERN(int) git_merge_inprogress(int *out, git_repository *repo);
  * @param repo the repository where the commits exist
  * @param one one of the commits
  * @param two the other commit
+ * @return Zero on success; GIT_ENOTFOUND or -1 on failure.
  */
-GIT_EXTERN(int) git_merge_base(git_oid *out, git_repository *repo, const git_oid *one, const git_oid *two);
+GIT_EXTERN(int) git_merge_base(
+	git_oid *out,
+	git_repository *repo,
+	const git_oid *one,
+	const git_oid *two);
 
 /**
  * Find a merge base given a list of commits
@@ -129,8 +134,13 @@ GIT_EXTERN(int) git_merge_base(git_oid *out, git_repository *repo, const git_oid
  * @param repo the repository where the commits exist
  * @param input_array oids of the commits
  * @param length The number of commits in the provided `input_array`
+ * @return Zero on success; GIT_ENOTFOUND or -1 on failure.
  */
-GIT_EXTERN(int) git_merge_base_many(git_oid *out, git_repository *repo, const git_oid input_array[], size_t length);
+GIT_EXTERN(int) git_merge_base_many(
+	git_oid *out,
+	git_repository *repo,
+	const git_oid input_array[],
+	size_t length);
 
 typedef int (*git_merge_strategy)(int *success,
 	git_repository *repo,
@@ -171,12 +181,12 @@ GIT_EXTERN(int) git_merge(
  * @return zero on success, -1 on failure.
  */
 GIT_EXTERN(int) git_merge_trees(
-                                git_index **out,
-                                git_repository *repo,
-                                const git_tree *ancestor_tree,
-                                const git_tree *our_tree,
-                                const git_tree *their_tree,
-                                const git_merge_tree_opts *opts);
+	git_index **out,
+	git_repository *repo,
+	const git_tree *ancestor_tree,
+	const git_tree *our_tree,
+	const git_tree *their_tree,
+	const git_merge_tree_opts *opts);
 
 /**
  * Returns true if a merge is up-to-date (we were asked to merge the target
@@ -212,10 +222,56 @@ GIT_EXTERN(int) git_merge_result_conflict_foreach(git_merge_result *merge_result
  */
 GIT_EXTERN(void) git_merge_result_free(git_merge_result *merge_result);
 
-GIT_EXTERN(int) git_merge_head_from_ref(git_merge_head **out, git_repository *repo, git_reference *ref);
-GIT_EXTERN(int) git_merge_head_from_oid(git_merge_head **out, git_repository *repo, const git_oid *oid);
-GIT_EXTERN(void) git_merge_head_free(git_merge_head *head);
+/**
+ * Creates a `git_merge_head` from the given reference
+ *
+ * @param out pointer to store the git_merge_head result in
+ * @param repo repository that contains the given reference
+ * @param ref reference to use as a merge input
+ * @return zero on success, -1 on failure.
+ */
+GIT_EXTERN(int) git_merge_head_from_ref(
+	git_merge_head **out,
+	git_repository *repo,
+	git_reference *ref);
 
+/**
+ * Creates a `git_merge_head` from the given fetch head data
+ *
+ * @param out pointer to store the git_merge_head result in
+ * @param repo repository that contains the given commit
+ * @param branch_name name of the (remote) branch
+ * @param remote_url url of the remote
+ * @param oid the commit object id to use as a merge input
+ * @return zero on success, -1 on failure.
+ */
+GIT_EXTERN(int) git_merge_head_from_fetchhead(
+	git_merge_head **out,
+	git_repository *repo,
+	const char *branch_name,
+	const char *remote_url,
+	const git_oid *oid);
+
+/**
+ * Creates a `git_merge_head` from the given commit id
+ *
+ * @param out pointer to store the git_merge_head result in
+ * @param repo repository that contains the given commit
+ * @param oid the commit object id to use as a merge input
+ * @return zero on success, -1 on failure.
+ */
+GIT_EXTERN(int) git_merge_head_from_oid(
+	git_merge_head **out,
+	git_repository *repo,
+	const git_oid *oid);
+
+/**
+ * Frees a `git_merge_head`
+ *
+ * @param the merge head to free
+ */
+GIT_EXTERN(void) git_merge_head_free(
+	git_merge_head *head);
 
 /** @} */
 GIT_END_DECL
