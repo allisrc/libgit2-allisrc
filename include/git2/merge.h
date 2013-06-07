@@ -162,7 +162,7 @@ typedef int (*git_merge_strategy)(int *success,
 GIT_EXTERN(int) git_merge(
 	git_merge_result **out,
 	git_repository *repo,
-	const git_merge_head **their_heads,
+	const git_merge_head_old **their_heads,
 	size_t their_heads_len,
 	const git_merge_opts *opts);
 
@@ -236,6 +236,19 @@ GIT_EXTERN(int) git_merge_head_from_ref(
 	git_reference *ref);
 
 /**
+ * Creates a `git_merge_head` from the given reference
+ *
+ * @param out pointer to store the git_merge_head result in
+ * @param repo repository that contains the given reference
+ * @param ref reference to use as a merge input
+ * @return zero on success, -1 on failure.
+ */
+GIT_EXTERN(int) git_merge_head_from_ref_old(
+	git_merge_head_old **out,
+	git_repository *repo,
+	git_reference *ref);
+
+/**
  * Creates a `git_merge_head` from the given fetch head data
  *
  * @param out pointer to store the git_merge_head result in
@@ -266,12 +279,33 @@ GIT_EXTERN(int) git_merge_head_from_oid(
 	const git_oid *oid);
 
 /**
+ * Creates a `git_merge_head` from the given commit id
+ *
+ * @param out pointer to store the git_merge_head result in
+ * @param repo repository that contains the given commit
+ * @param oid the commit object id to use as a merge input
+ * @return zero on success, -1 on failure.
+ */
+GIT_EXTERN(int) git_merge_head_from_oid_old(
+	git_merge_head_old **out,
+	git_repository *repo,
+	const git_oid *oid);
+
+/**
  * Frees a `git_merge_head`
  *
  * @param the merge head to free
  */
 GIT_EXTERN(void) git_merge_head_free(
 	git_merge_head *head);
+
+/**
+ * Frees a `git_merge_head`
+ *
+ * @param the merge head to free
+ */
+GIT_EXTERN(void) git_merge_head_free_old(
+	git_merge_head_old *head);
 
 /** @} */
 GIT_END_DECL

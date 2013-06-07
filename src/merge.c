@@ -387,7 +387,7 @@ static int merge_filediff_best_mode(const git_diff_tree_delta *delta)
 	return 0;
 }
 
-static char *merge_filediff_entry_name(const git_merge_head *merge_head,
+static char *merge_filediff_entry_name(const git_merge_head_old *merge_head,
 	const git_diff_tree_entry *entry,
 	bool rename)
 {
@@ -446,7 +446,7 @@ static int merge_filediff_entry_names(char **our_path,
 static int merge_filediff(
 	merge_filediff_result *result,
 	git_odb *odb,
-	const git_merge_head *merge_heads[],
+	const git_merge_head_old *merge_heads[],
 	const git_diff_tree_delta *delta,
 	unsigned int flags)
 {
@@ -2762,7 +2762,7 @@ void git_merge_head_free(git_merge_head *head)
 
 /* Merge setup */
 
-static int write_orig_head(git_repository *repo, const git_merge_head *our_head)
+static int write_orig_head_old(git_repository *repo, const git_merge_head_old *our_head)
 {
 	git_filebuf orig_head_file = GIT_FILEBUF_INIT;
 	git_buf orig_head_path = GIT_BUF_INIT;
@@ -2786,7 +2786,7 @@ static int write_orig_head(git_repository *repo, const git_merge_head *our_head)
 	return error;
 }
 
-static int write_merge_head(git_repository *repo, const git_merge_head *their_heads[], size_t their_heads_len)
+static int write_merge_head_old(git_repository *repo, const git_merge_head_old *their_heads[], size_t their_heads_len)
 {
 	git_filebuf merge_head_file = GIT_FILEBUF_INIT;
 	git_buf merge_head_path = GIT_BUF_INIT;
@@ -2818,7 +2818,7 @@ cleanup:
 	return error;
 }
 
-static int write_merge_mode(git_repository *repo, unsigned int flags)
+static int write_merge_mode_old(git_repository *repo, unsigned int flags)
 {
 	git_filebuf merge_mode_file = GIT_FILEBUF_INIT;
 	git_buf merge_mode_path = GIT_BUF_INIT;
@@ -2852,7 +2852,7 @@ cleanup:
 	return error;
 }
 
-static int write_merge_msg(git_repository *repo, const git_merge_head *their_heads[], size_t their_heads_len)
+static int write_merge_msg_old(git_repository *repo, const git_merge_head_old *their_heads[], size_t their_heads_len)
 {
 	git_filebuf merge_msg_file = GIT_FILEBUF_INIT;
 	git_buf merge_msg_path = GIT_BUF_INIT;
@@ -2934,15 +2934,15 @@ cleanup:
 
 static int merge_conflict_write_diff3(int *conflict_written,
 	git_repository *repo,
-	const git_merge_head *ancestor_head,
-	const git_merge_head *our_head,
-	const git_merge_head *their_head,
+	const git_merge_head_old *ancestor_head,
+	const git_merge_head_old *our_head,
+	const git_merge_head_old *their_head,
 	const git_diff_tree_delta *delta,
 	unsigned int flags)
 {
 	git_odb *odb = NULL;
 	merge_filediff_result result = MERGE_FILEDIFF_RESULT_INIT;
-	git_merge_head const *merge_heads[3] = { ancestor_head, our_head, their_head };
+	git_merge_head_old const *merge_heads[3] = { ancestor_head, our_head, their_head };
 	git_buf workdir_path = GIT_BUF_INIT;
 	git_filebuf output = GIT_FILEBUF_INIT;
 	int error = 0;
@@ -3006,7 +3006,7 @@ static int merge_conflict_write_file(
 
 static int merge_conflict_write_side(
 	git_repository *repo,
-	const git_merge_head *merge_head,
+	const git_merge_head_old *merge_head,
 	const git_diff_tree_delta *delta,
 	const git_diff_tree_entry *entry,
 	unsigned int flags)
@@ -3049,9 +3049,9 @@ static int merge_conflict_write_side(
 static int merge_conflict_write_sides(
 	int *conflict_written,
 	git_repository *repo,
-	const git_merge_head *ancestor_head,
-	const git_merge_head *our_head,
-	const git_merge_head *their_head,
+	const git_merge_head_old *ancestor_head,
+	const git_merge_head_old *our_head,
+	const git_merge_head_old *their_head,
 	const git_diff_tree_delta *delta,
 	unsigned int flags)
 {
@@ -3080,9 +3080,9 @@ done:
 
 static int merge_conflict_write(int *out,
 	git_repository *repo,
-	const git_merge_head *ancestor_head,
-	const git_merge_head *our_head,
-	const git_merge_head *their_head,
+	const git_merge_head_old *ancestor_head,
+	const git_merge_head_old *our_head,
+	const git_merge_head_old *their_head,
 	const git_diff_tree_delta *delta,
 	unsigned int flags)
 {
@@ -3107,10 +3107,10 @@ done:
 	return error;
 }
 
-int git_merge__setup(
+int git_merge__setup_old(
 	git_repository *repo,
-	const git_merge_head *our_head,
-    const git_merge_head *their_heads[],
+	const git_merge_head_old *our_head,
+    const git_merge_head_old *their_heads[],
 	size_t their_heads_len,
 	unsigned int flags)
 {
@@ -3118,10 +3118,10 @@ int git_merge__setup(
 
 	assert (repo && our_head && their_heads);
 	
-	if ((error = write_orig_head(repo, our_head)) == 0 &&
-		(error = write_merge_head(repo, their_heads, their_heads_len)) == 0 &&
-		(error = write_merge_mode(repo, flags)) == 0) {
-		error = write_merge_msg(repo, their_heads, their_heads_len);
+	if ((error = write_orig_head_old(repo, our_head)) == 0 &&
+		(error = write_merge_head_old(repo, their_heads, their_heads_len)) == 0 &&
+		(error = write_merge_mode_old(repo, flags)) == 0) {
+		error = write_merge_msg_old(repo, their_heads, their_heads_len);
 	}
 
 	return error;
@@ -3130,10 +3130,10 @@ int git_merge__setup(
 /* Merge branches */
 
 static int merge_ancestor_head(
-	git_merge_head **ancestor_head,
+	git_merge_head_old **ancestor_head,
 	git_repository *repo,
-	const git_merge_head *our_head,
-	const git_merge_head **their_heads,
+	const git_merge_head_old *our_head,
+	const git_merge_head_old **their_heads,
 	size_t their_heads_len)
 {
 	git_oid *oids, ancestor_oid;
@@ -3153,7 +3153,7 @@ static int merge_ancestor_head(
 	if ((error = git_merge_base_many(&ancestor_oid, repo, oids, their_heads_len + 1)) < 0)
 		goto on_error;
 
-	error = git_merge_head_from_oid(ancestor_head, repo, &ancestor_oid);
+	error = git_merge_head_from_oid_old(ancestor_head, repo, &ancestor_oid);
 
 on_error:
 	git__free(oids);
@@ -3162,8 +3162,8 @@ on_error:
 
 GIT_INLINE(bool) merge_check_uptodate(
 	git_merge_result *result,
-	const git_merge_head *our_head,
-	const git_merge_head *their_head)
+	const git_merge_head_old *our_head,
+	const git_merge_head_old *their_head)
 {
 	if (git_oid_cmp(&our_head->oid, &their_head->oid) == 0) {
 		result->is_uptodate = 1;
@@ -3175,9 +3175,9 @@ GIT_INLINE(bool) merge_check_uptodate(
 
 GIT_INLINE(bool) merge_check_fastforward(
 	git_merge_result *result,
-	const git_merge_head *ancestor_head,
-	const git_merge_head *our_head,
-	const git_merge_head *their_head,
+	const git_merge_head_old *ancestor_head,
+	const git_merge_head_old *our_head,
+	const git_merge_head_old *their_head,
 	unsigned int flags)
 {
 	if ((flags & GIT_MERGE_NO_FASTFORWARD) == 0 &&
@@ -3223,14 +3223,14 @@ static int merge_normalize_opts(
 int git_merge(
 	git_merge_result **out,
 	git_repository *repo,
-	const git_merge_head **their_heads,
+	const git_merge_head_old **their_heads,
 	size_t their_heads_len,
 	const git_merge_opts *given_opts)
 {
 	git_merge_result *result;
 	git_merge_opts opts;
 	git_reference *our_ref = NULL;
-	git_merge_head *ancestor_head = NULL, *our_head = NULL;
+	git_merge_head_old *ancestor_head = NULL, *our_head = NULL;
 	git_tree *ancestor_tree = NULL, *our_tree = NULL, **their_trees = NULL;
 	git_index *index;
 	git_diff_tree_delta *delta;
@@ -3254,7 +3254,7 @@ int git_merge(
 		goto on_error;
 	
 	if ((error = git_reference_lookup(&our_ref, repo, GIT_HEAD_FILE)) < 0 ||
-		(error = git_merge_head_from_ref(&our_head, repo, our_ref)) < 0 ||
+		(error = git_merge_head_from_ref_old(&our_head, repo, our_ref)) < 0 ||
 		(error = merge_ancestor_head(&ancestor_head, repo, our_head, their_heads, their_heads_len)) < 0)
 		goto on_error;
 	
@@ -3266,7 +3266,7 @@ int git_merge(
 	}
 	
 	/* Write the merge files to the repository. */
-	if ((error = git_merge__setup(repo, our_head, their_heads, their_heads_len, opts.merge_flags)) < 0)
+	if ((error = git_merge__setup_old(repo, our_head, their_heads, their_heads_len, opts.merge_flags)) < 0)
 		goto on_error;
 	
 	if ((error = git_commit_tree(&ancestor_tree, ancestor_head->commit)) < 0 ||
@@ -3323,8 +3323,8 @@ done:
 	
 	git__free(their_trees);
 	
-	git_merge_head_free(our_head);
-	git_merge_head_free(ancestor_head);
+	git_merge_head_free_old(our_head);
+	git_merge_head_free_old(ancestor_head);
 	
 	git_reference_free(our_ref);
 
@@ -3408,14 +3408,16 @@ void git_merge_result_free(git_merge_result *merge_result)
 	git__free(merge_result);
 }
 
-/* git_merge_head functions */
+/* git_merge_head functions
+ * from old repo
+ */
 
-static int merge_head_init(git_merge_head **out,
+static int merge_head_init_old(git_merge_head_old **out,
 	git_repository *repo,
 	const char *branch_name,
 	const git_oid *oid)
 {
-    git_merge_head *head;
+    git_merge_head_old *head;
 	int error = 0;
     
     assert(out && oid);
@@ -3433,7 +3435,7 @@ static int merge_head_init(git_merge_head **out,
     git_oid_cpy(&head->oid, oid);
 
 	if ((error = git_commit_lookup(&head->commit, repo, &head->oid)) < 0) {
-		git_merge_head_free(head);
+		git_merge_head_free_old(head);
 		return error;
 	}
     
@@ -3441,7 +3443,7 @@ static int merge_head_init(git_merge_head **out,
     return error;
 }
 
-int git_merge_head_from_ref(git_merge_head **out,
+int git_merge_head_from_ref_old(git_merge_head_old **out,
 	git_repository *repo,
 	git_reference *ref)
 {
@@ -3461,20 +3463,20 @@ int git_merge_head_from_ref(git_merge_head **out,
 	if (git__prefixcmp(ref_name, GIT_REFS_HEADS_DIR) == 0)
         ref_name += strlen(GIT_REFS_HEADS_DIR);
 
-    error = merge_head_init(out, repo, ref_name, git_reference_target(resolved));
+    error = merge_head_init_old(out, repo, ref_name, git_reference_target(resolved));
 
     git_reference_free(resolved);
     return error;
 }
 
-int git_merge_head_from_oid(git_merge_head **out,
+int git_merge_head_from_oid_old(git_merge_head_old **out,
 	git_repository *repo,
 	const git_oid *oid)
 {
-    return merge_head_init(out, repo, NULL, oid);
+    return merge_head_init_old(out, repo, NULL, oid);
 }
 
-void git_merge_head_free(git_merge_head *head)
+void git_merge_head_free_old(git_merge_head_old *head)
 {
     if (head == NULL)
         return;

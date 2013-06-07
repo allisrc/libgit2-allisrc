@@ -155,6 +155,9 @@ typedef struct git_packbuilder git_packbuilder;
 /** Representation of a git merge input */
 typedef struct git_merge_head git_merge_head;
 
+/** Representation of a git merge input from old repo */
+typedef struct git_merge_head_old git_merge_head_old;
+
 /** Representation of a git merge result */
 typedef struct git_merge_result git_merge_result;
 
