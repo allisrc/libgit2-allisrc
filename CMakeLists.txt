@@ -99,6 +99,7 @@ IF (WIN32 AND NOT MINGW)
 	ADD_DEFINITIONS(-DGIT_WINHTTP)
 ELSE ()
 	IF (NOT AMIGA)
+	   	SET(OPENSSL_ROOT_DIR "c:/minGW/msys/1.0/local")
 		FIND_PACKAGE(OpenSSL)
 	ENDIF ()
 
@@ -134,10 +135,16 @@ IF(WIN32 OR AMIGA)
 	SET(SRC_REGEX deps/regex/regex.c)
 ENDIF()
 
+# Set WIN32 library suffix
+IF (WIN32)
+	SET(CMAKE_FIND_LIBRARY_SUFFIXES ".dll")
+ENDIF()
+
 # Optional external dependency: zlib
 IF(NOT ZLIB_LIBRARY)
 	# It's optional, but FIND_PACKAGE gives a warning that looks more like an
 	# error.
+	SET(ZLIB_ROOT "c:/minGW/msys/1.0/local")
 	FIND_PACKAGE(ZLIB QUIET)
 ENDIF()
 IF (ZLIB_FOUND)
@@ -153,6 +160,8 @@ ELSEIF (NOT ZLIB_LIBRARY)
 ENDIF()
 
 IF(NOT LIBSSH2_LIBRARY)
+	SET(CMAKE_INCLUDE_PATH "c:/minGW/msys/1.0/local/include")
+	SET(CMAKE_LIBRARY_PATH "c:/minGW/msys/1.0/local/bin")
 	FIND_PACKAGE(LIBSSH2 QUIET)
 ENDIF()
 IF (LIBSSH2_FOUND)

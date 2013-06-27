@@ -8,7 +8,11 @@
 #ifdef GIT_SSH
 
 #include <libssh2.h>
+#ifndef WIN32
 #include <pthread.h>
+#else
+#include "win32\pthread.h"
+#endif
 
 #include "git2.h"
 #include "buffer.h"

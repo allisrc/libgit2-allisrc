@@ -17,6 +17,7 @@ else (LIBSSH2_LIBRARIES AND LIBSSH2_INCLUDE_DIRS)
     NAMES
       ssh2
       libssh2
+      libssh2-1
     PATHS
       /usr/lib
       /usr/local/lib

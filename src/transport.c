@@ -73,7 +73,11 @@ static int transport_find_fn(const char *url, git_transport_cb *callback, void *
 	/* It could be a SSH remote path. Check to see if there's a :
 	 * SSH is an unsupported transport mechanism in this version of libgit2 */
 	if (!definition && strrchr(url, ':'))
-		definition = &dummy_transport_definition; 
+#ifdef GIT_SSH
+		definition = &ssh_transport_definition;
+#else
+        definition = &dummy_transport_definition;
+#endif
 #else
 	/* For other systems, perform the SSH check first, to avoid going to the
 	 * filesystem if it is not necessary */
