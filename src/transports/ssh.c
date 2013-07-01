@@ -279,9 +279,16 @@ static int ssh_action(
 	const char *url,
 	git_smart_service_t action)
 {
+	git_cred_ssh_publickey *c;
+	int rc;
 	ssh_subtransport *t = (ssh_subtransport *)smart_transport;
 	const char *default_port = "22";
+#ifndef WIN32
     pthread_mutex_t mutexsum = PTHREAD_MUTEX_INITIALIZER;
+#else
+	pthread_mutex_t mutexsum;
+	pthread_mutex_init(&mutexsum, NULL);
+#endif
     
 	if (!stream)
 		return -1;
@@ -344,11 +351,11 @@ static int ssh_action(
 
 		assert(t->cred);
 
-		git_cred_ssh_publickey *c = (git_cred_ssh_publickey *)t->cred;
+		c = (git_cred_ssh_publickey *)t->cred;
 //		if (libssh2_userauth_password(t->session,
 //					c->username, c->password) < 0)
 //			return ssh_set_error(t->session);
-        int rc = libssh2_userauth_publickey_fromfile(t->session,
+        rc = libssh2_userauth_publickey_fromfile(t->session,
                                                      c->username, NULL, c->privatekey, NULL);
 		if (rc < 0)
 			return ssh_set_error(t->session);
@@ -381,7 +388,12 @@ static int ssh_action(
 static int ssh_close(git_smart_subtransport *subtransport)
 {
 	ssh_subtransport *t = (ssh_subtransport *) subtransport;
+#ifndef WIN32
     pthread_mutex_t mutexsum = PTHREAD_MUTEX_INITIALIZER;
+#else
+	pthread_mutex_t mutexsum;
+	pthread_mutex_init(&mutexsum, NULL);
+#endif
 
     pthread_mutex_lock(&mutexsum);
 	if (t->socket.socket > 0) {

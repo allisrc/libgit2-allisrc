@@ -135,11 +135,6 @@ IF(WIN32 OR AMIGA)
 	SET(SRC_REGEX deps/regex/regex.c)
 ENDIF()
 
-# Set WIN32 library suffix
-IF (WIN32)
-	SET(CMAKE_FIND_LIBRARY_SUFFIXES ".dll")
-ENDIF()
-
 # Optional external dependency: zlib
 IF(NOT ZLIB_LIBRARY)
 	# It's optional, but FIND_PACKAGE gives a warning that looks more like an
@@ -161,7 +156,7 @@ ENDIF()
 
 IF(NOT LIBSSH2_LIBRARY)
 	SET(CMAKE_INCLUDE_PATH "c:/minGW/msys/1.0/local/include")
-	SET(CMAKE_LIBRARY_PATH "c:/minGW/msys/1.0/local/bin")
+	SET(CMAKE_LIBRARY_PATH "c:/minGW/msys/1.0/local/lib")
 	FIND_PACKAGE(LIBSSH2 QUIET)
 ENDIF()
 IF (LIBSSH2_FOUND)
