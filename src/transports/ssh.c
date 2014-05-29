@@ -27,7 +27,7 @@ static const char cmd_receivepack[] = "git-receive-pack";
 //static bool is_ssh2_initiated = false;
 //static unsigned int ssh2_session_count = 0;
 static bool is_socket_zero = false;
-static const bool ssh2_nb = false;
+static const bool ssh2_nb = true;
 
 #define CHUNK_SIZE 32700
 
