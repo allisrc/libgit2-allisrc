@@ -235,7 +235,7 @@ static int ssh_stream_write(
 							FD_ZERO(&fd);
 							FD_SET(t->socket.socket, &fd);
 
-							rc = select(t->socket.socket + 1, &fd, NULL, NULL, &timeout);
+							rc = select(t->socket.socket + 1, NULL, &fd, NULL, &timeout);
 							/* negative is error and zero is timeout */
 							if (rc <= 0) {
 								return rc < 0 ? rc : LIBSSH2_ERROR_TIMEOUT;
@@ -269,7 +269,7 @@ static int ssh_stream_write(
 						FD_ZERO(&fd);
 						FD_SET(t->socket.socket, &fd);
 
-						total = select(t->socket.socket + 1, &fd, NULL, NULL, &timeout);
+						total = select(t->socket.socket + 1, NULL, &fd, NULL, &timeout);
 						/* negative is error and zero is timeout */
 						if (total <= 0) {
 							return total < 0 ? total : LIBSSH2_ERROR_TIMEOUT;
