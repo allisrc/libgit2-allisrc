@@ -24,8 +24,8 @@
 static const char prefix_ssh[] = "ssh://";
 static const char cmd_uploadpack[] = "git-upload-pack";
 static const char cmd_receivepack[] = "git-receive-pack";
-static bool is_ssh2_initiated = false;
-static unsigned int ssh2_session_count = 0;
+//static bool is_ssh2_initiated = false;
+//static unsigned int ssh2_session_count = 0;
 static bool is_socket_zero = false;
 
 #define CHUNK_SIZE 32700
@@ -317,13 +317,13 @@ static int ssh_action(
             is_socket_zero = true;
         }
 
-        if (!is_ssh2_initiated) {
-            if (libssh2_init(0) < 0) {
-                giterr_set(GITERR_NET, "Failed to init libssh2");
-                return -1;
-            }
-            is_ssh2_initiated = true;
-        }
+        //if (!is_ssh2_initiated) {
+        //    if (libssh2_init(0) < 0) {
+        //        giterr_set(GITERR_NET, "Failed to init libssh2");
+        //        return -1;
+        //    }
+        //    is_ssh2_initiated = true;
+        //}
         pthread_mutex_unlock(&mutexsum);
 
 		t->session = libssh2_session_init();
@@ -331,8 +331,8 @@ static int ssh_action(
 			giterr_set(GITERR_NET, "Failed to init SSH session");
 			return -1;
 		}
-        else
-            ssh2_session_count++;
+        //else
+        //    ssh2_session_count++;
 
 		libssh2_session_set_blocking(t->session, 1);
         
@@ -444,14 +444,14 @@ static void ssh_free(git_smart_subtransport *smart_transport)
         libssh2_session_disconnect(t->session, NULL);
         libssh2_session_free(t->session);
     }
-    ssh2_session_count--;
+    //ssh2_session_count--;
 
     // call libssh2_exit only when there is no
     // session running to avoid double free
-    if (ssh2_session_count == 0) {
-        libssh2_exit();
-        is_ssh2_initiated = false;
-    }
+    //if (ssh2_session_count == 0) {
+    //    libssh2_exit();
+    //    is_ssh2_initiated = false;
+    //}
 
 	gitno_close(&t->socket);
 

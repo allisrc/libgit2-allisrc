@@ -10,6 +10,9 @@
 #include "fileops.h"
 #include "git2/threads.h"
 #include "thread-utils.h"
+#ifdef GIT_SSH
+#include <libssh2.h>
+#endif
 
 
 git_mutex git__mwindow_mutex;
@@ -67,6 +70,11 @@ int git_threads_init(void)
 	if ((error = git_hash_global_init()) >= 0)
 		_tls_init = 1;
 
+#ifdef GIT_SSH
+	if ((error = libssh2_init(0)) == 0)
+		_tls_init = 1;
+#endif
+
 	if (error == 0)
 		_tls_init = 1;
 
@@ -83,6 +91,9 @@ void git_threads_shutdown(void)
 
 	/* Shut down any subsystems that have global state */
 	git_hash_global_shutdown();
+#ifdef GIT_SSH
+	libssh2_exit();
+#endif
 	git_futils_dirs_free();
 }
 
