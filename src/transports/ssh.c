@@ -8,11 +8,11 @@
 #ifdef GIT_SSH
 
 #include <libssh2.h>
-#ifndef WIN32
-#include <pthread.h>
-#else
-#include "win32\pthread.h"
-#endif
+//#ifndef WIN32
+//#include <pthread.h>
+//#else
+//#include "win32\pthread.h"
+//#endif
 
 #include "git2.h"
 #include "buffer.h"
@@ -283,12 +283,12 @@ static int ssh_action(
 	int rc;
 	ssh_subtransport *t = (ssh_subtransport *)smart_transport;
 	const char *default_port = "22";
-#ifndef WIN32
-    pthread_mutex_t mutexsum = PTHREAD_MUTEX_INITIALIZER;
-#else
-	pthread_mutex_t mutexsum;
-	pthread_mutex_init(&mutexsum, NULL);
-#endif
+//#ifndef WIN32
+//    pthread_mutex_t mutexsum = PTHREAD_MUTEX_INITIALIZER;
+//#else
+//	pthread_mutex_t mutexsum;
+//	pthread_mutex_init(&mutexsum, NULL);
+//#endif
     
 	if (!stream)
 		return -1;
@@ -310,7 +310,7 @@ static int ssh_action(
 
         // make sure libssh2_init is called only once
         // socket has to be a unique number
-		pthread_mutex_lock(&mutexsum);
+		//pthread_mutex_lock(&mutexsum);
 		if (gitno_connect(&t->socket, t->host, t->port, 0) < 0)
 			return -1;
         if (t->socket.socket == 0) {
@@ -324,7 +324,7 @@ static int ssh_action(
         //    }
         //    is_ssh2_initiated = true;
         //}
-        pthread_mutex_unlock(&mutexsum);
+        //pthread_mutex_unlock(&mutexsum);
 
 		t->session = libssh2_session_init();
 		if (t->session == NULL) {
@@ -388,14 +388,14 @@ static int ssh_action(
 static int ssh_close(git_smart_subtransport *subtransport)
 {
 	ssh_subtransport *t = (ssh_subtransport *) subtransport;
-#ifndef WIN32
-    pthread_mutex_t mutexsum = PTHREAD_MUTEX_INITIALIZER;
-#else
-	pthread_mutex_t mutexsum;
-	pthread_mutex_init(&mutexsum, NULL);
-#endif
+//#ifndef WIN32
+//    pthread_mutex_t mutexsum = PTHREAD_MUTEX_INITIALIZER;
+//#else
+//	pthread_mutex_t mutexsum;
+//	pthread_mutex_init(&mutexsum, NULL);
+//#endif
 
-    pthread_mutex_lock(&mutexsum);
+    //pthread_mutex_lock(&mutexsum);
 	if (t->socket.socket > 0) {
 		gitno_close(&t->socket);
 		memset(&t->socket, 0x0, sizeof(gitno_socket));
@@ -408,7 +408,7 @@ static int ssh_close(git_smart_subtransport *subtransport)
         t->socket.socket = -1;
         is_socket_zero = false;
     }
-    pthread_mutex_unlock(&mutexsum);
+    //pthread_mutex_unlock(&mutexsum);
 
 	if (t->cred) {
 		t->cred->free(t->cred);
