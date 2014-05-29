@@ -27,6 +27,7 @@ static const char cmd_receivepack[] = "git-receive-pack";
 //static bool is_ssh2_initiated = false;
 //static unsigned int ssh2_session_count = 0;
 static bool is_socket_zero = false;
+static const bool ssh2_nb = false;
 
 #define CHUNK_SIZE 32700
 
@@ -334,14 +335,28 @@ static int ssh_action(
         //else
         //    ssh2_session_count++;
 
-		libssh2_session_set_blocking(t->session, 1);
+		if (!ssh2_nb)
+			libssh2_session_set_blocking(t->session, 1);
+		else
+			libssh2_session_set_blocking(t->session, 0);
         
         // explicitly set timeout to 0, so that there is no timeout for blocking function calls
-        libssh2_session_set_timeout(t->session, 0);
+		if (!ssh2_nb)
+			libssh2_session_set_timeout(t->session, 0);
 
-		if (libssh2_session_handshake(t->session,
-					(libssh2_socket_t)(t->socket.socket)) < 0)
-			return ssh_set_error(t->session);
+		if (!ssh2_nb) {
+			if (libssh2_session_handshake(t->session,
+				(libssh2_socket_t)(t->socket.socket)) < 0)
+				return ssh_set_error(t->session);
+		}
+		else {
+			do {
+				rc = libssh2_session_handshake(t->session,
+					(libssh2_socket_t)(t->socket.socket));
+				if (rc < 0 && rc != LIBSSH2_ERROR_EAGAIN)
+					return ssh_set_error(t->session);
+			} while (rc == LIBSSH2_ERROR_EAGAIN);
+		}
 
 		if (t->owner->cred_acquire_cb(&t->cred, t->owner->url,
                     t->user_from_url,
@@ -355,14 +370,33 @@ static int ssh_action(
 //		if (libssh2_userauth_password(t->session,
 //					c->username, c->password) < 0)
 //			return ssh_set_error(t->session);
+		if (!ssh2_nb) {
         rc = libssh2_userauth_publickey_fromfile(t->session,
                                                      c->username, NULL, c->privatekey, NULL);
 		if (rc < 0)
 			return ssh_set_error(t->session);
+		}
+		else {
+			do {
+				rc = libssh2_userauth_publickey_fromfile(t->session,
+					c->username, NULL, c->privatekey, NULL);
+				if (rc < 0 && rc != LIBSSH2_ERROR_EAGAIN)
+					return ssh_set_error(t->session);
+			} while (rc == LIBSSH2_ERROR_EAGAIN);
+		}
 
-		t->channel = libssh2_channel_open_session(t->session);
-		if (t->channel == NULL)
-			return ssh_set_error(t->session);
+		if (!ssh2_nb) {
+			t->channel = libssh2_channel_open_session(t->session);
+			if (t->channel == NULL)
+				return ssh_set_error(t->session);
+		}
+		else {
+			do {
+				t->channel = libssh2_channel_open_session(t->session);
+				if (t->channel == NULL && libssh2_session_last_errno(t->session) != LIBSSH2_ERROR_EAGAIN)
+					return ssh_set_error(t->session);
+			} while (t->channel == NULL);
+		}
 
 		t->connected = 1;
 	}
