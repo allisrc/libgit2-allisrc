@@ -106,7 +106,13 @@ static int send_command(ssh_stream *s)
 
 	/* It looks like negative values are errors here, and positive values
 	 * are the number of bytes sent. */
+	if (!ssh2_nb)
 	error = libssh2_channel_exec(t->channel, git_buf_cstr(&request));
+	else {
+		do {
+			error = libssh2_channel_exec(t->channel, git_buf_cstr(&request));
+		} while (error == LIBSSH2_ERROR_EAGAIN);
+	}
 
 	if (error >= 0)
 		s->sent_command = 1;
@@ -126,6 +132,8 @@ static int ssh_stream_read(
 	ssh_stream *s = (ssh_stream *)stream;
 	ssh_subtransport *t = OWNING_SUBTRANSPORT(s);
 	gitno_buffer buf;
+	struct timeval timeout;
+	fd_set fd;
 
 	*bytes_read = 0;
 
@@ -134,12 +142,44 @@ static int ssh_stream_read(
 
 	gitno_buffer_setup(&t->socket, &buf, buffer, buf_size);
 
-	error = libssh2_channel_read(t->channel, buf.data, buf.len);
-	if (error < 0)
-		return ssh_set_error(t->session);
-	else
-		buf.offset = error;
+	if (!ssh2_nb) {
+		error = libssh2_channel_read(t->channel, buf.data, buf.len);
+		if (error < 0)
+			return ssh_set_error(t->session);
+		else
+			buf.offset = error;
+	}
+	else {
+		do {
+			error = libssh2_channel_read(t->channel, buf.data, buf.len);
+			if (error == LIBSSH2_ERROR_EAGAIN) {
+				timeout.tv_sec = 5;
+				timeout.tv_usec = 0;
 
+				do {
+					FD_ZERO(&fd);
+					FD_SET(t->socket.socket, &fd);
+
+					error = select(t->socket.socket + 1, &fd, NULL, NULL, &timeout);
+					/* negative is error and zero is timeout */
+					if (error <= 0) {
+						return error < 0 ? error : LIBSSH2_ERROR_TIMEOUT;
+					}
+					else if (FD_ISSET(t->socket.socket, &fd))
+						break;
+					Sleep(500);
+				} while (1);
+			}
+			else if (error >= 0) {
+				buf.offset = error;
+				goto on_exit;
+			}
+			else
+				return ssh_set_error(t->session);
+		} while (1);
+	}
+
+on_exit:
 	*bytes_read = buf.offset;
 
 	return 0;
@@ -156,24 +196,95 @@ static int ssh_stream_write(
     int32_t total = 0;
     int32_t left = len;		// object size is limited to 4G bytes.
     const char *unwritten = buffer;
+	struct timeval timeout;
+	fd_set fd;
 
 	if (!s->sent_command && send_command(s) < 0)
 		return -1;
     
     // send the packet in chunks if it is too big
-    if (len > CHUNK_SIZE) {
-        do {
-            rc = libssh2_channel_write(t->channel, unwritten, CHUNK_SIZE > left ? left : CHUNK_SIZE);
-            if (rc < 0)
-                return rc;
-            unwritten += CHUNK_SIZE;
-            left -= CHUNK_SIZE;
-            total += rc;
-        } while (left > 0);
-    }
-    else {
-        total = libssh2_channel_write(t->channel, buffer, len);
-    }
+	if (!ssh2_nb) {
+		if (len > CHUNK_SIZE) {
+			do {
+				rc = libssh2_channel_write(t->channel, unwritten, CHUNK_SIZE > left ? left : CHUNK_SIZE);
+				if (rc < 0)
+					return rc;
+				unwritten += CHUNK_SIZE;
+				left -= CHUNK_SIZE;
+				total += rc;
+			} while (left > 0);
+		}
+		else {
+			total = libssh2_channel_write(t->channel, buffer, len);
+		}
+	}
+	else {
+		if (len > CHUNK_SIZE) {
+			do {
+				do {
+					rc = libssh2_channel_write(t->channel, unwritten, CHUNK_SIZE > left ? left : CHUNK_SIZE);
+					// condition 1: error and return error
+					if (rc < 0 && rc != LIBSSH2_ERROR_EAGAIN)
+						return rc;
+					// condition 2: EAGAIN, loop
+					else if (rc == LIBSSH2_ERROR_EAGAIN) {
+						timeout.tv_sec = 5;
+						timeout.tv_usec = 0;
+
+						do {
+							FD_ZERO(&fd);
+							FD_SET(t->socket.socket, &fd);
+
+							rc = select(t->socket.socket + 1, &fd, NULL, NULL, &timeout);
+							/* negative is error and zero is timeout */
+							if (rc <= 0) {
+								return rc < 0 ? rc : LIBSSH2_ERROR_TIMEOUT;
+							}
+							else if (FD_ISSET(t->socket.socket, &fd))
+								break;
+							Sleep(500);
+						} while (1);
+					}
+					// condition 3: normal situation, keep writing
+					else
+						break;
+				} while (1);
+				unwritten += CHUNK_SIZE;
+				left -= CHUNK_SIZE;
+				total += rc;
+			} while (left > 0);
+		}
+		else {
+			do {
+				total = libssh2_channel_write(t->channel, buffer, len);
+				// condition 1: error and return error
+				if (total < 0 && total != LIBSSH2_ERROR_EAGAIN)
+					return total;
+				// condition 2: EAGAIN, loop
+				else if (total == LIBSSH2_ERROR_EAGAIN) {
+					timeout.tv_sec = 5;
+					timeout.tv_usec = 0;
+
+					do {
+						FD_ZERO(&fd);
+						FD_SET(t->socket.socket, &fd);
+
+						total = select(t->socket.socket + 1, &fd, NULL, NULL, &timeout);
+						/* negative is error and zero is timeout */
+						if (total <= 0) {
+							return total < 0 ? total : LIBSSH2_ERROR_TIMEOUT;
+						}
+						else if (FD_ISSET(t->socket.socket, &fd))
+							break;
+						Sleep(500);
+					} while (1);
+				}
+				// condition 3: normal situation, keep writing
+				else
+					break;
+			} while (1);
+		}
+	}
 
 	return total;
 }
