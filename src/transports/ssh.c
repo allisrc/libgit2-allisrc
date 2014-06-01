@@ -466,7 +466,7 @@ static int ssh_action(
 					(libssh2_socket_t)(t->socket.socket));
 				if (rc < 0 && rc != LIBSSH2_ERROR_EAGAIN)
 					return ssh_set_error(t->session);
-				Sleep(500);
+				Sleep(1000);
 			} while (rc == LIBSSH2_ERROR_EAGAIN);
 		}
 
