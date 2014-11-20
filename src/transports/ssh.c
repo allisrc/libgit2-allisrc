@@ -584,13 +584,22 @@ static int ssh_close(git_smart_subtransport *subtransport)
 static void ssh_free(git_smart_subtransport *smart_transport)
 {
 	ssh_subtransport *t = (ssh_subtransport *)smart_transport;
+	int rc;
 
     if (t->connected == 1) {
-        libssh2_channel_close(t->channel);
-        libssh2_channel_free(t->channel);
+      do {
+        rc = libssh2_channel_close(t->channel);
+      } while (rc == LIBSSH2_ERROR_EAGAIN);
+      do {
+        rc = libssh2_channel_free(t->channel);
+      } while (rc == LIBSSH2_ERROR_EAGAIN);
         
-        libssh2_session_disconnect(t->session, NULL);
-        libssh2_session_free(t->session);
+      do {
+        rc = libssh2_session_disconnect(t->session, NULL);
+      } while (rc == LIBSSH2_ERROR_EAGAIN);
+      do {
+        rc = libssh2_session_free(t->session);
+      } while (rc == LIBSSH2_ERROR_EAGAIN);
     }
     //ssh2_session_count--;
 
