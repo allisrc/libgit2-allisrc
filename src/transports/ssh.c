@@ -388,7 +388,7 @@ static int ssh_action(
 	int rc;
 	ssh_subtransport *t = (ssh_subtransport *)smart_transport;
 	const char *default_port = "22";
-    
+
 	if (!stream)
 		return -1;
 
@@ -397,7 +397,7 @@ static int ssh_action(
 
 	if (!t->host || !t->port) {
 		if (gitno_extract_host_and_port(&t->host, &t->port,
-					url, default_port) < 0)
+			url, default_port) < 0)
 			return -1;
 	}
 
@@ -407,14 +407,14 @@ static int ssh_action(
 			return -1;
 		}
 
-        // make sure libssh2_init is called only once
-        // socket has to be a unique number
+		// make sure libssh2_init is called only once
+		// socket has to be a unique number
 		//pthread_mutex_lock(&mutexsum);
 		if (gitno_connect(&t->socket, t->host, t->port, 0) < 0)
 			return -1;
-        if (t->socket.socket == 0) {
-            is_socket_zero = true;
-        }
+		if (t->socket.socket == 0) {
+			is_socket_zero = true;
+		}
 
 		t->session = libssh2_session_init();
 		if (t->session == NULL) {
@@ -426,61 +426,95 @@ static int ssh_action(
 			libssh2_session_set_blocking(t->session, 1);
 		else
 			libssh2_session_set_blocking(t->session, 0);
-        
-        // explicitly set timeout to 0, so that there is no timeout for blocking function calls
+
+		// explicitly set timeout to 0, so that there is no timeout for blocking function calls
 		if (!ssh2_nb)
 			libssh2_session_set_timeout(t->session, 0);
 
 		if (!ssh2_nb) {
 			if (libssh2_session_handshake(t->session,
-				(libssh2_socket_t)(t->socket.socket)) < 0)
-				return ssh_set_error(t->session);
+				(libssh2_socket_t)(t->socket.socket)) < 0) {
+					ssh_set_error(t->session);
+					do {
+						rc = libssh2_session_free(t->session);
+					} while (rc == LIBSSH2_ERROR_EAGAIN);
+					return -1;
+			}
 		}
 		else {
 			do {
 				rc = libssh2_session_handshake(t->session,
 					(libssh2_socket_t)(t->socket.socket));
-				if (rc < 0 && rc != LIBSSH2_ERROR_EAGAIN)
-					return ssh_set_error(t->session);
+				if (rc < 0 && rc != LIBSSH2_ERROR_EAGAIN) {
+					ssh_set_error(t->session);
+					do {
+						rc = libssh2_session_free(t->session);
+					} while (rc == LIBSSH2_ERROR_EAGAIN);
+					return -1;
+				}
 				Sleep(1000);
 			} while (rc == LIBSSH2_ERROR_EAGAIN);
 		}
 
 		if (t->owner->cred_acquire_cb(&t->cred, t->owner->url,
-                    t->user_from_url,
-					GIT_CREDTYPE_SSH_PUBLICKEY,
-                    t->owner->cred_acquire_payload) < 0)
-			return -1;
+			t->user_from_url,
+			GIT_CREDTYPE_SSH_PUBLICKEY,
+			t->owner->cred_acquire_payload) < 0) {
+				do {
+					rc = libssh2_session_free(t->session);
+				} while (rc == LIBSSH2_ERROR_EAGAIN);
+				return -1;
+		}
 
 		assert(t->cred);
 
 		c = (git_cred_ssh_publickey *)t->cred;
 		if (!ssh2_nb) {
-        rc = libssh2_userauth_publickey_fromfile(t->session,
-                                                     c->username, NULL, c->privatekey, NULL);
-		if (rc < 0)
-			return ssh_set_error(t->session);
+			rc = libssh2_userauth_publickey_fromfile(t->session,
+				c->username, NULL, c->privatekey, NULL);
+			if (rc < 0) {
+				ssh_set_error(t->session);
+				do {
+					rc = libssh2_session_free(t->session);
+				} while (rc == LIBSSH2_ERROR_EAGAIN);
+				return -1;
+			}
 		}
 		else {
 			do {
 				rc = libssh2_userauth_publickey_fromfile(t->session,
 					c->username, NULL, c->privatekey, NULL);
-				if (rc < 0 && rc != LIBSSH2_ERROR_EAGAIN)
-					return ssh_set_error(t->session);
+				if (rc < 0 && rc != LIBSSH2_ERROR_EAGAIN) {
+					ssh_set_error(t->session);
+					do {
+						rc = libssh2_session_free(t->session);
+					} while (rc == LIBSSH2_ERROR_EAGAIN);
+					return -1;
+				}
 				Sleep(1000);
 			} while (rc == LIBSSH2_ERROR_EAGAIN);
 		}
 
 		if (!ssh2_nb) {
 			t->channel = libssh2_channel_open_session(t->session);
-			if (t->channel == NULL)
-				return ssh_set_error(t->session);
+			if (t->channel == NULL) {
+				ssh_set_error(t->session);
+				do {
+					rc = libssh2_session_free(t->session);
+				} while (rc == LIBSSH2_ERROR_EAGAIN);
+				return -1;
+			}
 		}
 		else {
 			do {
 				t->channel = libssh2_channel_open_session(t->session);
-				if (t->channel == NULL && libssh2_session_last_errno(t->session) != LIBSSH2_ERROR_EAGAIN)
-					return ssh_set_error(t->session);
+				if (t->channel == NULL && libssh2_session_last_errno(t->session) != LIBSSH2_ERROR_EAGAIN) {
+					ssh_set_error(t->session);
+					do {
+						rc = libssh2_session_free(t->session);
+					} while (rc == LIBSSH2_ERROR_EAGAIN);
+					return -1;
+				}
 				Sleep(500);
 			} while (t->channel == NULL);
 		}
@@ -489,17 +523,17 @@ static int ssh_action(
 	}
 
 	switch (action) {
-		case GIT_SERVICE_UPLOADPACK_LS:
-			return ssh_uploadpack_ls(stream, t, url);
+	case GIT_SERVICE_UPLOADPACK_LS:
+		return ssh_uploadpack_ls(stream, t, url);
 
-		case GIT_SERVICE_UPLOADPACK:
-			return ssh_uploadpack(stream, t);
-            
-        case GIT_SERVICE_RECEIVEPACK_LS:
-            return ssh_receivepack_ls(stream, t, url);
-            
-        case GIT_SERVICE_RECEIVEPACK:
-            return ssh_receivepack(stream, t);
+	case GIT_SERVICE_UPLOADPACK:
+		return ssh_uploadpack(stream, t);
+
+	case GIT_SERVICE_RECEIVEPACK_LS:
+		return ssh_receivepack_ls(stream, t, url);
+
+	case GIT_SERVICE_RECEIVEPACK:
+		return ssh_receivepack(stream, t);
 	}
 
 	*stream = NULL;
