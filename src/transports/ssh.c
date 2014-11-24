@@ -8,11 +8,6 @@
 #ifdef GIT_SSH
 
 #include <libssh2.h>
-//#ifndef WIN32
-//#include <pthread.h>
-//#else
-//#include "win32\pthread.h"
-//#endif
 
 #include "git2.h"
 #include "buffer.h"
@@ -24,8 +19,6 @@
 static const char prefix_ssh[] = "ssh://";
 static const char cmd_uploadpack[] = "git-upload-pack";
 static const char cmd_receivepack[] = "git-receive-pack";
-//static bool is_ssh2_initiated = false;
-//static unsigned int ssh2_session_count = 0;
 static bool is_socket_zero = false;
 static const bool ssh2_nb = true;
 
@@ -395,12 +388,6 @@ static int ssh_action(
 	int rc;
 	ssh_subtransport *t = (ssh_subtransport *)smart_transport;
 	const char *default_port = "22";
-//#ifndef WIN32
-//    pthread_mutex_t mutexsum = PTHREAD_MUTEX_INITIALIZER;
-//#else
-//	pthread_mutex_t mutexsum;
-//	pthread_mutex_init(&mutexsum, NULL);
-//#endif
     
 	if (!stream)
 		return -1;
@@ -429,22 +416,11 @@ static int ssh_action(
             is_socket_zero = true;
         }
 
-        //if (!is_ssh2_initiated) {
-        //    if (libssh2_init(0) < 0) {
-        //        giterr_set(GITERR_NET, "Failed to init libssh2");
-        //        return -1;
-        //    }
-        //    is_ssh2_initiated = true;
-        //}
-        //pthread_mutex_unlock(&mutexsum);
-
 		t->session = libssh2_session_init();
 		if (t->session == NULL) {
 			giterr_set(GITERR_NET, "Failed to init SSH session");
 			return -1;
 		}
-        //else
-        //    ssh2_session_count++;
 
 		if (!ssh2_nb)
 			libssh2_session_set_blocking(t->session, 1);
@@ -479,9 +455,6 @@ static int ssh_action(
 		assert(t->cred);
 
 		c = (git_cred_ssh_publickey *)t->cred;
-//		if (libssh2_userauth_password(t->session,
-//					c->username, c->password) < 0)
-//			return ssh_set_error(t->session);
 		if (!ssh2_nb) {
         rc = libssh2_userauth_publickey_fromfile(t->session,
                                                      c->username, NULL, c->privatekey, NULL);
@@ -536,12 +509,6 @@ static int ssh_action(
 static int ssh_close(git_smart_subtransport *subtransport)
 {
 	ssh_subtransport *t = (ssh_subtransport *) subtransport;
-//#ifndef WIN32
-//    pthread_mutex_t mutexsum = PTHREAD_MUTEX_INITIALIZER;
-//#else
-//	pthread_mutex_t mutexsum;
-//	pthread_mutex_init(&mutexsum, NULL);
-//#endif
 
     //pthread_mutex_lock(&mutexsum);
 	if (t->socket.socket > 0) {
@@ -601,14 +568,6 @@ static void ssh_free(git_smart_subtransport *smart_transport)
         rc = libssh2_session_free(t->session);
       } while (rc == LIBSSH2_ERROR_EAGAIN);
     }
-    //ssh2_session_count--;
-
-    // call libssh2_exit only when there is no
-    // session running to avoid double free
-    //if (ssh2_session_count == 0) {
-    //    libssh2_exit();
-    //    is_ssh2_initiated = false;
-    //}
 
 	gitno_close(&t->socket);
 
