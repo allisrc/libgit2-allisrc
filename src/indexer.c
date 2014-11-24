@@ -734,5 +734,6 @@ void git_indexer_stream_free(git_indexer_stream *idx)
 	git_vector_free(&idx->deltas);
 	git_packfile_free(idx->pack);
 	git_filebuf_cleanup(&idx->pack_file);
+	git_hash_ctx_cleanup(&idx->hash_ctx);
 	git__free(idx);
 }
