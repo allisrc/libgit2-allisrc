@@ -1,9 +1,9 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
- *
- * This file is part of libgit2, distributed under the GNU GPL v2 with
- * a Linking Exception. For full terms see the included COPYING file.
- */
+* Copyright (C) 2009-2012 the libgit2 contributors
+*
+* This file is part of libgit2, distributed under the GNU GPL v2 with
+* a Linking Exception. For full terms see the included COPYING file.
+*/
 
 #ifdef GIT_SSH
 
@@ -46,18 +46,18 @@ typedef struct {
 } ssh_subtransport;
 
 /*
- * Create a git protocol request.
- *
- * For example: 0035git-upload-pack /libgit2/libgit2\0host=github.com\0
- *                  git-receive-pack /libgit2/libgit2\0host=github.com\0
- */
+* Create a git protocol request.
+*
+* For example: 0035git-upload-pack /libgit2/libgit2\0host=github.com\0
+*                  git-receive-pack /libgit2/libgit2\0host=github.com\0
+*/
 static int gen_proto(git_buf *request, const char *cmd, const char *url)
 {
 	char *delim, *repo;
 
 	if (!cmd)
 		//cmd = cmd_uploadpack;
-        return -1;
+			return -1;
 
 	delim = strchr(url, '/');
 	if (delim == NULL) {
@@ -98,9 +98,9 @@ static int send_command(ssh_stream *s)
 		goto cleanup;
 
 	/* It looks like negative values are errors here, and positive values
-	 * are the number of bytes sent. */
+	* are the number of bytes sent. */
 	if (!ssh2_nb)
-	error = libssh2_channel_exec(t->channel, git_buf_cstr(&request));
+		error = libssh2_channel_exec(t->channel, git_buf_cstr(&request));
 	else {
 		do {
 			error = libssh2_channel_exec(t->channel, git_buf_cstr(&request));
@@ -186,16 +186,16 @@ static int ssh_stream_write(
 	ssh_stream *s = (ssh_stream *)stream;
 	ssh_subtransport *t = OWNING_SUBTRANSPORT(s);
 	int rc;
-    int32_t total = 0;
-    int32_t left = len;		// object size is limited to 4G bytes.
-    const char *unwritten = buffer;
+	int32_t total = 0;
+	int32_t left = len;		// object size is limited to 4G bytes.
+	const char *unwritten = buffer;
 	struct timeval timeout;
 	fd_set fd;
 
 	if (!s->sent_command && send_command(s) < 0)
 		return -1;
-    
-    // send the packet in chunks if it is too big
+
+	// send the packet in chunks if it is too big
 	if (!ssh2_nb) {
 		if (len > CHUNK_SIZE) {
 			do {
@@ -348,32 +348,32 @@ static int ssh_uploadpack(
 }
 
 static int ssh_receivepack_ls(
-                             git_smart_subtransport_stream **stream,
-                             ssh_subtransport *t,
-                             const char *url)
+	git_smart_subtransport_stream **stream,
+	ssh_subtransport *t,
+	const char *url)
 {
 	ssh_stream *s;
-    
+
 	*stream = NULL;
-    
+
 	if (ssh_stream_alloc(stream, t, url, cmd_receivepack) < 0)
 		return -1;
-    
+
 	s = (ssh_stream *)*stream;
 	t->current_stream = s;
-    
+
 	return 0;
 }
 
 static int ssh_receivepack(
-                          git_smart_subtransport_stream **stream,
-                          ssh_subtransport *t)
+	git_smart_subtransport_stream **stream,
+	ssh_subtransport *t)
 {
 	if (t->current_stream) {
 		*stream = &t->current_stream->parent;
 		return 0;
 	}
-    
+
 	giterr_set(GITERR_NET, "Must call RECEIVEPACK_LS before RECEIVEPACK");
 	return -1;
 }
@@ -437,6 +437,8 @@ static int ssh_action(
 					ssh_set_error(t->session);
 					do {
 						rc = libssh2_session_free(t->session);
+						if (rc == LIBSSH2_ERROR_EAGAIN)
+							Sleep(2000);
 					} while (rc == LIBSSH2_ERROR_EAGAIN);
 					return -1;
 			}
@@ -449,6 +451,8 @@ static int ssh_action(
 					ssh_set_error(t->session);
 					do {
 						rc = libssh2_session_free(t->session);
+						if (rc == LIBSSH2_ERROR_EAGAIN)
+							Sleep(2000);
 					} while (rc == LIBSSH2_ERROR_EAGAIN);
 					return -1;
 				}
@@ -462,6 +466,8 @@ static int ssh_action(
 			t->owner->cred_acquire_payload) < 0) {
 				do {
 					rc = libssh2_session_free(t->session);
+					if (rc == LIBSSH2_ERROR_EAGAIN)
+						Sleep(2000);
 				} while (rc == LIBSSH2_ERROR_EAGAIN);
 				return -1;
 		}
@@ -476,6 +482,8 @@ static int ssh_action(
 				ssh_set_error(t->session);
 				do {
 					rc = libssh2_session_free(t->session);
+					if (rc == LIBSSH2_ERROR_EAGAIN)
+						Sleep(2000);
 				} while (rc == LIBSSH2_ERROR_EAGAIN);
 				return -1;
 			}
@@ -488,6 +496,8 @@ static int ssh_action(
 					ssh_set_error(t->session);
 					do {
 						rc = libssh2_session_free(t->session);
+						if (rc == LIBSSH2_ERROR_EAGAIN)
+							Sleep(2000);
 					} while (rc == LIBSSH2_ERROR_EAGAIN);
 					return -1;
 				}
@@ -501,6 +511,8 @@ static int ssh_action(
 				ssh_set_error(t->session);
 				do {
 					rc = libssh2_session_free(t->session);
+					if (rc == LIBSSH2_ERROR_EAGAIN)
+						Sleep(2000);
 				} while (rc == LIBSSH2_ERROR_EAGAIN);
 				return -1;
 			}
@@ -512,6 +524,8 @@ static int ssh_action(
 					ssh_set_error(t->session);
 					do {
 						rc = libssh2_session_free(t->session);
+						if (rc == LIBSSH2_ERROR_EAGAIN)
+							Sleep(2000);
 					} while (rc == LIBSSH2_ERROR_EAGAIN);
 					return -1;
 				}
@@ -544,20 +558,20 @@ static int ssh_close(git_smart_subtransport *subtransport)
 {
 	ssh_subtransport *t = (ssh_subtransport *) subtransport;
 
-    //pthread_mutex_lock(&mutexsum);
+	//pthread_mutex_lock(&mutexsum);
 	if (t->socket.socket > 0) {
 		gitno_close(&t->socket);
 		memset(&t->socket, 0x0, sizeof(gitno_socket));
-        t->socket.socket = -1;
+		t->socket.socket = -1;
 	}
-    // socket is zero is a special case
-    else if (t->socket.socket == 0 && is_socket_zero) {
+	// socket is zero is a special case
+	else if (t->socket.socket == 0 && is_socket_zero) {
 		gitno_close(&t->socket);
 		memset(&t->socket, 0x0, sizeof(gitno_socket));
-        t->socket.socket = -1;
-        is_socket_zero = false;
-    }
-    //pthread_mutex_unlock(&mutexsum);
+		t->socket.socket = -1;
+		is_socket_zero = false;
+	}
+	//pthread_mutex_unlock(&mutexsum);
 
 	if (t->cred) {
 		t->cred->free(t->cred);
@@ -587,21 +601,29 @@ static void ssh_free(git_smart_subtransport *smart_transport)
 	ssh_subtransport *t = (ssh_subtransport *)smart_transport;
 	int rc;
 
-    if (t->connected == 1) {
-      do {
-        rc = libssh2_channel_close(t->channel);
-      } while (rc == LIBSSH2_ERROR_EAGAIN);
-      do {
-        rc = libssh2_channel_free(t->channel);
-      } while (rc == LIBSSH2_ERROR_EAGAIN);
-        
-      do {
-        rc = libssh2_session_disconnect(t->session, NULL);
-      } while (rc == LIBSSH2_ERROR_EAGAIN);
-      do {
-        rc = libssh2_session_free(t->session);
-      } while (rc == LIBSSH2_ERROR_EAGAIN);
-    }
+	if (t->connected == 1) {
+		do {
+			rc = libssh2_channel_close(t->channel);
+			if (rc == LIBSSH2_ERROR_EAGAIN)
+				Sleep(2000);
+		} while (rc == LIBSSH2_ERROR_EAGAIN);
+		do {
+			rc = libssh2_channel_free(t->channel);
+			if (rc == LIBSSH2_ERROR_EAGAIN)
+				Sleep(2000);
+		} while (rc == LIBSSH2_ERROR_EAGAIN);
+
+		do {
+			rc = libssh2_session_disconnect(t->session, NULL);
+			if (rc == LIBSSH2_ERROR_EAGAIN)
+				Sleep(2000);
+		} while (rc == LIBSSH2_ERROR_EAGAIN);
+		do {
+			rc = libssh2_session_free(t->session);
+			if (rc == LIBSSH2_ERROR_EAGAIN)
+				Sleep(2000);
+		} while (rc == LIBSSH2_ERROR_EAGAIN);
+	}
 
 	gitno_close(&t->socket);
 
