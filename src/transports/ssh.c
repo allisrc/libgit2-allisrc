@@ -608,6 +608,11 @@ static void ssh_free(git_smart_subtransport *smart_transport)
 				Sleep(2000);
 		} while (rc == LIBSSH2_ERROR_EAGAIN);
 		do {
+			rc = libssh2_channel_wait_closed(t->channel);
+			if (rc == LIBSSH2_ERROR_EAGAIN)
+				Sleep(2000);
+		} while (rc == LIBSSH2_ERROR_EAGAIN);
+		do {
 			rc = libssh2_channel_free(t->channel);
 			if (rc == LIBSSH2_ERROR_EAGAIN)
 				Sleep(2000);
