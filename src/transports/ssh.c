@@ -146,7 +146,7 @@ static int ssh_stream_read(
 		do {
 			error = libssh2_channel_read(t->channel, buf.data, buf.len);
 			if (error == LIBSSH2_ERROR_EAGAIN) {
-				timeout.tv_sec = 5;
+				timeout.tv_sec = 10;
 				timeout.tv_usec = 0;
 
 				do {
