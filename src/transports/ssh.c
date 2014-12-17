@@ -422,6 +422,7 @@ static int ssh_action(
 			return -1;
 		}
 
+		/*
 		if (!ssh2_nb)
 			libssh2_session_set_blocking(t->session, 1);
 		else
@@ -430,7 +431,11 @@ static int ssh_action(
 		// explicitly set timeout to 0, so that there is no timeout for blocking function calls
 		if (!ssh2_nb)
 			libssh2_session_set_timeout(t->session, 0);
+		*/
+		// set timeout to 1 minute.
+		libssh2_session_set_timeout(t->session, 60000);
 
+		/*
 		if (!ssh2_nb) {
 			if (libssh2_session_handshake(t->session,
 				(libssh2_socket_t)(t->socket.socket)) < 0) {
@@ -459,6 +464,14 @@ static int ssh_action(
 				Sleep(1000);
 			} while (rc == LIBSSH2_ERROR_EAGAIN);
 		}
+		*/
+		// initiate handshake
+		if (libssh2_session_handshake(t->session,
+			(libssh2_socket_t)(t->socket.socket)) < 0) {
+				ssh_set_error(t->session);
+				rc = libssh2_session_free(t->session);
+				return -1;
+		}
 
 		if (t->owner->cred_acquire_cb(&t->cred, t->owner->url,
 			t->user_from_url,
@@ -475,6 +488,7 @@ static int ssh_action(
 		assert(t->cred);
 
 		c = (git_cred_ssh_publickey *)t->cred;
+		/*
 		if (!ssh2_nb) {
 			rc = libssh2_userauth_publickey_fromfile(t->session,
 				c->username, NULL, c->privatekey, NULL);
@@ -504,7 +518,17 @@ static int ssh_action(
 				Sleep(1000);
 			} while (rc == LIBSSH2_ERROR_EAGAIN);
 		}
+		*/
+		// authorize user
+		rc = libssh2_userauth_publickey_fromfile(t->session,
+			c->username, NULL, c->privatekey, NULL);
+		if (rc < 0) {
+			ssh_set_error(t->session);
+			rc = libssh2_session_free(t->session);
+			return -1;
+		}
 
+		/*
 		if (!ssh2_nb) {
 			t->channel = libssh2_channel_open_session(t->session);
 			if (t->channel == NULL) {
@@ -532,6 +556,22 @@ static int ssh_action(
 				Sleep(500);
 			} while (t->channel == NULL);
 		}
+		*/
+		// open channel
+		t->channel = libssh2_channel_open_session(t->session);
+		if (t->channel == NULL) {
+			ssh_set_error(t->session);
+			rc = libssh2_session_free(t->session);
+			return -1;
+		}
+
+		// set blocking setting
+		if (!ssh2_nb) {
+			libssh2_session_set_blocking(t->session, 1);
+			libssh2_session_set_timeout(t->session, 60000);
+		}
+		else
+			libssh2_session_set_blocking(t->session, 0);
 
 		t->connected = 1;
 	}
