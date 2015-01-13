@@ -146,7 +146,7 @@ static int ssh_stream_read(
 		do {
 			error = libssh2_channel_read(t->channel, buf.data, buf.len);
 			if (error == LIBSSH2_ERROR_EAGAIN) {
-				timeout.tv_sec = 20;
+				timeout.tv_sec = 90;
 				timeout.tv_usec = 0;
 
 				do {
@@ -221,7 +221,7 @@ static int ssh_stream_write(
 						return rc;
 					// condition 2: EAGAIN, loop
 					else if (rc == LIBSSH2_ERROR_EAGAIN) {
-						timeout.tv_sec = 5;
+						timeout.tv_sec = 90;
 						timeout.tv_usec = 0;
 
 						do {
@@ -255,7 +255,7 @@ static int ssh_stream_write(
 					return total;
 				// condition 2: EAGAIN, loop
 				else if (total == LIBSSH2_ERROR_EAGAIN) {
-					timeout.tv_sec = 5;
+					timeout.tv_sec = 90;
 					timeout.tv_usec = 0;
 
 					do {
