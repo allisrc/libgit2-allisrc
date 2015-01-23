@@ -407,9 +407,6 @@ static int ssh_action(
 			return -1;
 		}
 
-		// make sure libssh2_init is called only once
-		// socket has to be a unique number
-		//pthread_mutex_lock(&mutexsum);
 		if (gitno_connect(&t->socket, t->host, t->port, 0) < 0)
 			return -1;
 		if (t->socket.socket == 0) {
