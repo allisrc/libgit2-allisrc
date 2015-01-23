@@ -422,49 +422,9 @@ static int ssh_action(
 			return -1;
 		}
 
-		/*
-		if (!ssh2_nb)
-			libssh2_session_set_blocking(t->session, 1);
-		else
-			libssh2_session_set_blocking(t->session, 0);
-
-		// explicitly set timeout to 0, so that there is no timeout for blocking function calls
-		if (!ssh2_nb)
-			libssh2_session_set_timeout(t->session, 0);
-		*/
 		// set timeout to 1 minute.
 		libssh2_session_set_timeout(t->session, 60000);
 
-		/*
-		if (!ssh2_nb) {
-			if (libssh2_session_handshake(t->session,
-				(libssh2_socket_t)(t->socket.socket)) < 0) {
-					ssh_set_error(t->session);
-					do {
-						rc = libssh2_session_free(t->session);
-						if (rc == LIBSSH2_ERROR_EAGAIN)
-							Sleep(2000);
-					} while (rc == LIBSSH2_ERROR_EAGAIN);
-					return -1;
-			}
-		}
-		else {
-			do {
-				rc = libssh2_session_handshake(t->session,
-					(libssh2_socket_t)(t->socket.socket));
-				if (rc < 0 && rc != LIBSSH2_ERROR_EAGAIN) {
-					ssh_set_error(t->session);
-					do {
-						rc = libssh2_session_free(t->session);
-						if (rc == LIBSSH2_ERROR_EAGAIN)
-							Sleep(2000);
-					} while (rc == LIBSSH2_ERROR_EAGAIN);
-					return -1;
-				}
-				Sleep(1000);
-			} while (rc == LIBSSH2_ERROR_EAGAIN);
-		}
-		*/
 		// initiate handshake
 		if (libssh2_session_handshake(t->session,
 			(libssh2_socket_t)(t->socket.socket)) < 0) {
@@ -488,37 +448,6 @@ static int ssh_action(
 		assert(t->cred);
 
 		c = (git_cred_ssh_publickey *)t->cred;
-		/*
-		if (!ssh2_nb) {
-			rc = libssh2_userauth_publickey_fromfile(t->session,
-				c->username, NULL, c->privatekey, NULL);
-			if (rc < 0) {
-				ssh_set_error(t->session);
-				do {
-					rc = libssh2_session_free(t->session);
-					if (rc == LIBSSH2_ERROR_EAGAIN)
-						Sleep(2000);
-				} while (rc == LIBSSH2_ERROR_EAGAIN);
-				return -1;
-			}
-		}
-		else {
-			do {
-				rc = libssh2_userauth_publickey_fromfile(t->session,
-					c->username, NULL, c->privatekey, NULL);
-				if (rc < 0 && rc != LIBSSH2_ERROR_EAGAIN) {
-					ssh_set_error(t->session);
-					do {
-						rc = libssh2_session_free(t->session);
-						if (rc == LIBSSH2_ERROR_EAGAIN)
-							Sleep(2000);
-					} while (rc == LIBSSH2_ERROR_EAGAIN);
-					return -1;
-				}
-				Sleep(1000);
-			} while (rc == LIBSSH2_ERROR_EAGAIN);
-		}
-		*/
 		// authorize user
 		rc = libssh2_userauth_publickey_fromfile(t->session,
 			c->username, NULL, c->privatekey, NULL);
@@ -528,35 +457,6 @@ static int ssh_action(
 			return -1;
 		}
 
-		/*
-		if (!ssh2_nb) {
-			t->channel = libssh2_channel_open_session(t->session);
-			if (t->channel == NULL) {
-				ssh_set_error(t->session);
-				do {
-					rc = libssh2_session_free(t->session);
-					if (rc == LIBSSH2_ERROR_EAGAIN)
-						Sleep(2000);
-				} while (rc == LIBSSH2_ERROR_EAGAIN);
-				return -1;
-			}
-		}
-		else {
-			do {
-				t->channel = libssh2_channel_open_session(t->session);
-				if (t->channel == NULL && libssh2_session_last_errno(t->session) != LIBSSH2_ERROR_EAGAIN) {
-					ssh_set_error(t->session);
-					do {
-						rc = libssh2_session_free(t->session);
-						if (rc == LIBSSH2_ERROR_EAGAIN)
-							Sleep(2000);
-					} while (rc == LIBSSH2_ERROR_EAGAIN);
-					return -1;
-				}
-				Sleep(500);
-			} while (t->channel == NULL);
-		}
-		*/
 		// open channel
 		t->channel = libssh2_channel_open_session(t->session);
 		if (t->channel == NULL) {
