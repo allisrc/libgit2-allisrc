@@ -14,6 +14,15 @@
 #include "netops.h"
 #include "smart.h"
 
+#ifdef _WIN32
+#include <Windows.h>
+#define sleep(a) Sleep(a * 1000)
+#else
+#include <unistd.h>
+#endif
+
+
+
 #define OWNING_SUBTRANSPORT(s) ((ssh_subtransport *)(s)->parent.subtransport)
 
 static const char prefix_ssh[] = "ssh://";
@@ -160,7 +169,7 @@ static int ssh_stream_read(
 					}
 					else if (FD_ISSET(t->socket.socket, &fd))
 						break;
-					Sleep(500);
+					sleep(1);
 				} while (1);
 			}
 			else if (error >= 0) {
@@ -235,7 +244,7 @@ static int ssh_stream_write(
 							}
 							else if (FD_ISSET(t->socket.socket, &fd))
 								break;
-							Sleep(500);
+							sleep(1);
 						} while (1);
 					}
 					// condition 3: normal situation, keep writing
@@ -269,7 +278,7 @@ static int ssh_stream_write(
 						}
 						else if (FD_ISSET(t->socket.socket, &fd))
 							break;
-						Sleep(500);
+						sleep(1);
 					} while (1);
 				}
 				// condition 3: normal situation, keep writing
@@ -437,7 +446,7 @@ static int ssh_action(
 				do {
 					rc = libssh2_session_free(t->session);
 					if (rc == LIBSSH2_ERROR_EAGAIN)
-						Sleep(2000);
+						sleep(2);
 				} while (rc == LIBSSH2_ERROR_EAGAIN);
 				return -1;
 		}
@@ -542,28 +551,28 @@ static void ssh_free(git_smart_subtransport *smart_transport)
 		do {
 			rc = libssh2_channel_close(t->channel);
 			if (rc == LIBSSH2_ERROR_EAGAIN)
-				Sleep(2000);
+				sleep(2);
 		} while (rc == LIBSSH2_ERROR_EAGAIN);
 		do {
 			rc = libssh2_channel_wait_closed(t->channel);
 			if (rc == LIBSSH2_ERROR_EAGAIN)
-				Sleep(2000);
+				sleep(2);
 		} while (rc == LIBSSH2_ERROR_EAGAIN);
 		do {
 			rc = libssh2_channel_free(t->channel);
 			if (rc == LIBSSH2_ERROR_EAGAIN)
-				Sleep(2000);
+				sleep(2);
 		} while (rc == LIBSSH2_ERROR_EAGAIN);
 
 		do {
 			rc = libssh2_session_disconnect(t->session, NULL);
 			if (rc == LIBSSH2_ERROR_EAGAIN)
-				Sleep(2000);
+				sleep(2);
 		} while (rc == LIBSSH2_ERROR_EAGAIN);
 		do {
 			rc = libssh2_session_free(t->session);
 			if (rc == LIBSSH2_ERROR_EAGAIN)
-				Sleep(2000);
+				sleep(2);
 		} while (rc == LIBSSH2_ERROR_EAGAIN);
 	}
 
