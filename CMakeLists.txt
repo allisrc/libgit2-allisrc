@@ -159,10 +159,19 @@ IF(NOT LIBSSH2_LIBRARY)
 	SET(CMAKE_LIBRARY_PATH "c:/minGW/msys/1.0/local/lib")
 	FIND_PACKAGE(LIBSSH2 QUIET)
 ENDIF()
+
 IF (LIBSSH2_FOUND)
 	ADD_DEFINITIONS(-DGIT_SSH)
 	INCLUDE_DIRECTORIES(${LIBSSH2_INCLUDE_DIR})
 	SET(SSH_LIBRARIES ${LIBSSH2_LIBRARIES})
+# XXX build x86 version
+ELSEIF(CMAKE_SYSTEM_VERSION MATCHES "Android")
+	ADD_DEFINITIONS(-DGIT_SSH)
+	INCLUDE_DIRECTORIES("../../prebuilt/android/19/armeabi/include/")
+        SET(SSH_LIBRARIES 
+          "${CMAKE_SOURCE_DIR}/../../prebuilt/android/19/armeabi/lib/libssh2.a"
+          "${CMAKE_SOURCE_DIR}/../../prebuilt/android/19/armeabi/lib/libcrypto.a"
+          "${CMAKE_SOURCE_DIR}/../../prebuilt/android/19/armeabi/lib/libssl.a")
 ENDIF()
 
 # Platform specific compilation flags
