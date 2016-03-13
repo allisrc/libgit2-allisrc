@@ -28,6 +28,15 @@ OPTION( TAGS				"Generate tags"							OFF )
 OPTION( PROFILE				"Generate profiling information"		OFF )
 OPTION( ENABLE_TRACE		"Enables tracing support"				OFF )
 OPTION( SONAME_APPEND "Append the given string to the library's filename" OFF )
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+    set(WINDOWS TRUE)
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+    set(LINUX TRUE)
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    set(MACOSX TRUE)
+endif()
+
 IF(MSVC)
 	# This option is only availalbe when building with MSVC. By default,
 	# libgit2 is build using the stdcall calling convention, as that's what
@@ -152,7 +161,7 @@ IF (ZLIB_FOUND)
 	INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIRS})
 	LINK_LIBRARIES(${ZLIB_LIBRARIES})
 	# Fake the message CMake would have shown
-	MESSAGE("-- Found zlib: ${ZLIB_LIBRARY}")
+	MESSAGE("-------------- Found zlib: ${ZLIB_LIBRARY}")
 ELSEIF (NOT ZLIB_LIBRARY)
 	MESSAGE( "zlib was not found; using bundled 3rd-party sources." )
 	INCLUDE_DIRECTORIES(deps/zlib)
@@ -179,13 +188,20 @@ ELSEIF(CMAKE_SYSTEM_VERSION MATCHES "Android")
           "${CMAKE_SOURCE_DIR}/../../prebuilt/android/19/armeabi/lib/libssh2.a"
           "${CMAKE_SOURCE_DIR}/../../prebuilt/android/19/armeabi/lib/libcrypto.a"
           "${CMAKE_SOURCE_DIR}/../../prebuilt/android/19/armeabi/lib/libssl.a")
-ELSEIF(LINUX OR UNIX)
+ELSEIF(LINUX)
         ADD_DEFINITIONS(-DGIT_SSH -DGIT_SSL)
 	INCLUDE_DIRECTORIES("../../prebuilt/linux/x86_64/include/")
         SET(SSH_LIBRARIES 
           "${CMAKE_SOURCE_DIR}/../../prebuilt/linux/x86_64/lib/libssh2.a"
           "${CMAKE_SOURCE_DIR}/../../prebuilt/linux/x86_64/lib/libcrypto.a"
           "${CMAKE_SOURCE_DIR}/../../prebuilt/linux/x86_64/lib/libssl.a")
+ELSEIF( MACOSX )
+        ADD_DEFINITIONS(-DGIT_SSH -DGIT_SSL)
+	INCLUDE_DIRECTORIES("../../prebuilt/osx/x86_64/include/")
+        SET(SSH_LIBRARIES 
+          "${CMAKE_SOURCE_DIR}/../../prebuilt/osx/x86_64/lib/libssh2.a"
+          "${CMAKE_SOURCE_DIR}/../../prebuilt/osx/x86_64/lib/libcrypto.a"
+          "${CMAKE_SOURCE_DIR}/../../prebuilt/osx/x86_64/lib/libssl.a")
 ENDIF()
 
 # Platform specific compilation flags

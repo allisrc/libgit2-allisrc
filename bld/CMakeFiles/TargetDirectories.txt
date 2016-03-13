@@ -1,0 +1,1 @@
+/Users/daming/clients/vault-deps/sources/libgit2-xuesong/bld/CMakeFiles/git2.dir
